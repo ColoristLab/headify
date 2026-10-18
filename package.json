@@ -85,7 +85,7 @@
     "husky": "^9.1.7",
     "npm-run-all2": "^8.0.4",
     "picocolors": "^1.1.1",
-    "prettier": "^3.6.2",
+    "prettier": "^3.9.10",
     "prettier-plugin-sort-pkgjson": "^1.0.0",
     "prompts": "^2.4.2",
     "rimraf": "^6.0.1",
