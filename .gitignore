@@ -1,3 +1,5 @@
 dist
-node_modules/
-coverage/
+node_modules
+
+# 覆盖率
+coverage

@@ -1,122 +1,68 @@
-# headnote
+# headmark
 
 [![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-048754?logo=buymeacoffee)](https://www.lujiahao.com/sponsor)
-[![npm](https://img.shields.io/npm/v/headnote)](https://www.npmjs.com/package/headnote)
-[![TypeScript](https://img.shields.io/badge/%3C%2F%3E-TypeScript-%230074c1.svg)](http://www.typescriptlang.org/)
-[![cdn version](https://data.jsdelivr.com/v1/package/npm/headnote/badge)](https://www.jsdelivr.com/package/npm/headnote)
-[![codecov](https://codecov.io/gh/ajiho/headnote/graph/badge.svg?token=G2P1AI238H)](https://codecov.io/gh/ajiho/headnote)
-[![Test](https://img.shields.io/github/actions/workflow/status/ajiho/headnote/test.yml?label=Test&logo=github&style=flat-square&branch=main)](https://github.com/ajiho/headnote/actions/workflows/test.yml)
-[![Node](https://img.shields.io/node/v/headnote.svg)](https://nodejs.org/en/about/previous-releases)
+[![TypeScript](https://img.shields.io/badge/%3C%2F%3E-TypeScript-%230074c1.svg)](https://www.typescriptlang.org/)
+[![Test](https://img.shields.io/github/actions/workflow/status/ColoristLab/headmark/tests.yml?label=Test&logo=github&style=flat-square&branch=main)](https://github.com/ColoristLab/headmark/actions/workflows/tests.yml)
+[![Node](https://img.shields.io/node/v/headmark.svg)](https://nodejs.org/en/about/previous-releases)
 [![Vitest](https://img.shields.io/badge/tested%20with-vitest-fcc72b.svg?logo=vitest)](https://vitest.dev/)
-[![npm bundle size](https://deno.bundlejs.com/badge?q=headnote)](https://bundlejs.com/?q=headnote)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![codecov](https://codecov.io/github/ColoristLab/headmark/graph/badge.svg?token=YR846BMB6Y)](https://codecov.io/github/ColoristLab/headmark)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ColoristLab/headmark/blob/main/LICENSE)
 
----
+一个轻量级命令行工具，通过模板为文件添加头部注释。
 
-[English](./README.en.md) | 简体中文
-
-## headnote是什么？
-
-一个命令行工具，可以从 package.json 或自定义配置，快速生成文件横幅。
-
-## 快速开始
-
-**使用 npm 安装**
+## 安装
 
 ```bash
-$ npm install -D headnote
+npm install -D headmark
 ```
 
-**使用 Yarn 安装**
+## 使用
+
+支持 Glob 路径模式。
 
 ```bash
-$ yarn add -D headnote
+# 使用默认模板
+headmark "dist/**/*.{js,css}"
+
+# 使用自定义模板
+headmark "dist/**/*.js" --template banner.eta
+
+# 排除文件
+headmark "dist/**/*.js" --exclude "dist/vendor/**"
+
+# 预览变更
+headmark "dist/**/*.js" --dry-run
 ```
 
-## 使用方法
+## 自定义模板
 
-> [!NOTE]
-> 路径支持 Glob 模式
+使用 [Eta](https://eta.js.org/) 模板语法编写文件头部。
 
-```bash
-$ headnote dist/**/*.css
-```
+创建 `banner.eta`：
 
-headnote 可以从 `.json`、`.js`、`.ts`、`.mjs`、`.mts`、 文件或你的 `package.json` 文件中读取配置。
-
-- 若要使用自定义配置文件，请在命令行中指定它：
-
-```bash
-$ headnote dist/**/*.css --config headnote.config.mjs
-```
-
-`headnote.config.mjs` 配置示例：
-
-```js
-export default {
-  banner: `/*
- * Awesome Project v1.0.0
- * Copyright 2023-2025 yourname
- * license MIT
- */`,
-}
-```
-
-- 如果省略 `--config` 标志，headnote 会在你的 `package.json` 中查找 `headnote` 键的配置。如果没有找到该键,headnote默认从`package.json`读取数据生成横幅注释。
-
-`package.json` 配置示例：
-
-```json
-{
-  "name": "headnote",
-  "version": "1.0.0",
-  "homepage": "https://lujiahao.com",
-  "license": "MIT",
-  "author": "ajiho <lujiahao@88.com>"
-}
-```
-
-会生成如下横幅注释：
-
-```js
+```eta
 /*!
- * Headnote v1.0.0
- * https://lujiahao.com
+ * <%= it.package.name %> v<%= it.package.version %>
  *
- * Copyright (c) 2025 ajiho <lujiahao@88.com>
- * Licensed under the MIT license
+ * Copyright (c) <%= it.year %> <%= it.package.author %>
+ * Licensed under the <%= it.package.license %> license
  */
 ```
 
-## CLI 命令行
-
-通过运行`npx headnote --help`获取帮助信息
+运行：
 
 ```bash
-Usage: headnote [options] <files...>
-
-Prepend banner headers to files.
-
-Arguments:
-  files                    Files or glob patterns
-
-Options:
-  -V, --version            output the version number
-  -c, --config <path>      Path to config file
-  --exclude <patterns...>  Exclude files or directories (supports glob)
-  --dry-run                Print actions without writing files
-  -h, --help               display help for command
-
-Examples:
-  # Prepend banner to all JS files in src/
-  $ headnote "src/**/*.js"
-
-  # Load custom config file
-  $ headnote "src/**/*.js" --config headnote.config.mjs
+headmark "dist/**/*.js" --template banner.eta
 ```
 
-## 许可证
+默认情况下，headmark 从项目的 `package.json` 读取元数据，并使用内置模板生成文件头部。
 
-[MIT](https://github.com/ajiho/headnote/blob/main/LICENSE)
+## 命令行选项
 
-Copyright (c) 2025-present, ajiho
+| 选项                      | 描述                      |
+| ------------------------- | ------------------------- |
+| `-t, --template <path>`   | 自定义模板文件路径        |
+| `--exclude <patterns...>` | 排除文件或目录，支持 Glob |
+| `--dry-run`               | 预览操作，不修改文件      |
+| `-V, --version`           | 显示版本号                |
+| `-h, --help`              | 显示帮助信息              |

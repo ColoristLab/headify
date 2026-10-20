@@ -1,4 +1,4 @@
-name: Release
+name: release
 
 on:
   push:
@@ -6,38 +6,44 @@ on:
       - "v*"
 
 permissions:
-  contents: write
+  contents: write # 使能够发布GitHub版本
+  id-token: write # OIDC 发布所必须的
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: 22
+          node-version-file: ".nvmrc"
           registry-url: "https://registry.npmjs.org"
-          cache: "npm"
+          cache: "pnpm"
 
       - name: Install dependencies
-        run: npm install
+        run: pnpm install
 
       - name: Build
-        run: npm run build
+        run: pnpm build
 
       - name: Publish to npm
-        run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm publish --no-git-checks
 
-      - name: Release
-        uses: softprops/action-gh-release@v2
+      - name: Generate changelog for the latest release
+        run: pnpm release changelog --config cliff.toml -o CHANGELOG-LATEST.md -vv --latest --strip header
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: startsWith(github.ref, 'refs/tags/')
+          GITHUB_REPO: ${{ github.repository }}
+
+      - name: Github Release
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
-          body: |
-            Please refer to [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+          body_path: CHANGELOG-LATEST.md
+          prerelease: ${{ contains(github.ref_name, '-') }}

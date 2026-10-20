@@ -1,8 +1,1 @@
-# 统一用 LF
 * text=auto eol=lf
-
-# 强制所有 .md 文件使用 LF 换行符
-*.md text eol=lf
-
-# 强制所有 .json 文件使用 LF 换行符
-*.json text eol=lf
