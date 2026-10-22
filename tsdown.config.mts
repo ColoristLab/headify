@@ -1,7 +1,7 @@
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
-  entry: ["src/index.ts"], // 入口文件
+  entry: ["./src/{cli,index}.ts"], // 入口文件
   format: ["esm"], // 输出 ES Module 格式
   platform: "node", // 目标运行平台
   fixedExtension: true, // 固定使用 .mjs 扩展名
