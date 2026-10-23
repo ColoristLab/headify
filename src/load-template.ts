@@ -2,16 +2,14 @@ import { createRequire } from "node:module";
 import { extname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-export type DefineTemplate<TContext = unknown> = (ctx: TContext) => string | Promise<string>;
+import type { DefineTemplate } from "./types.ts";
 
 const require = createRequire(import.meta.url);
 
 const esmExtensions = new Set([".mjs", ".mts"]);
 const cjsExtensions = new Set([".cjs", ".cts"]);
 
-export default async function loadTemplate<TContext = unknown>(
-  templatePath: string,
-): Promise<DefineTemplate<TContext>> {
+export default async function loadTemplate(templatePath: string): Promise<DefineTemplate> {
   const filePath = resolve(templatePath);
   const extension = extname(filePath).toLowerCase();
 
@@ -33,5 +31,5 @@ export default async function loadTemplate<TContext = unknown>(
     throw new TypeError(`Template "${filePath}" must export a function as its default export.`);
   }
 
-  return template as DefineTemplate<TContext>;
+  return template as DefineTemplate;
 }

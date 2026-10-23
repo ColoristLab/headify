@@ -4,16 +4,15 @@ import { resolve } from "node:path";
 
 import type { HeadmarkOptions } from "./types.js";
 
-type FindFilesOptions = Pick<HeadmarkOptions, "exclude" | "cwd">;
-
+type FindFilesOptions = Required<Pick<HeadmarkOptions, "exclude" | "cwd">>;
 /**
  * 查找目标文件。
  */
 export async function findFiles(
   patterns: string | string[],
-  options: FindFilesOptions = {},
+  options: FindFilesOptions,
 ): Promise<string[]> {
-  const { cwd = process.cwd(), exclude = [] } = options;
+  const { cwd, exclude } = options;
   const files = new Set<string>();
 
   for await (const file of glob(patterns, {

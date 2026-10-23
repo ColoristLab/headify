@@ -10,7 +10,7 @@ import type { FileContext, HeadmarkContext } from "./types.js";
 export function createContext(
   packageMetadata: PackageJson,
   filePath: string,
-  cwd: string = process.cwd(),
+  cwd: string,
 ): HeadmarkContext {
   const absolutePath = resolve(cwd, filePath);
   const relativePath = relative(cwd, absolutePath);

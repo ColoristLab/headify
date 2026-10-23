@@ -1,10 +1,11 @@
-import { defineTemplate, dedent } from "./index.ts";
-import type { HeadmarkContext } from "./types.js";
+import { dedent } from "ts-dedent";
+
+import { defineTemplate } from "./define-template.ts";
 
 /**
  * 默认 banner 模板。
  */
-export const defaultTemplate = defineTemplate((ctx: HeadmarkContext) => {
+export const defaultTemplate = defineTemplate((ctx) => {
   const { package: pkg, year, startYear } = ctx;
 
   const copyright = startYear ? `${startYear}-${year}` : String(year);

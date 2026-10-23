@@ -30,10 +30,14 @@ export interface HeadmarkContext {
   /** 当前处理的文件 */
   file: FileContext;
 
-  startYear: number;
+  startYear?: number;
 
-  contributors: string[];
+  contributors?: string[];
 }
+
+export type DefineTemplate<TContext = HeadmarkContext> = (
+  context: TContext,
+) => string | Promise<string>;
 
 export interface HeadmarkOptions {
   /**

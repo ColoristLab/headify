@@ -1,0 +1,436 @@
+src/cli.ts
+
+#!/usr/bin/env node
+
+import cac from "cac";
+
+import pkg from "../package.json" with { type: "json" };
+import { logger } from "./logger.ts";
+
+const cli = cac("headmark");
+
+cli.help().version(pkg.version);
+
+cli
+  .command("<files...>", "Prepend banner headers to files.", {
+    ignoreOptionDefaultValue: true,
+    allowUnknownOptions: false,
+  })
+  .option("-t, --template <path>", "Path to Eta template file")
+  .option("-e, --exclude <patterns...>", "Exclude files or directories (supports glob)")
+  .option("--dry-run", "Preview changes without writing files")
+  .action(async (files: string[], options) => {
+    const { headmark } = await import("./headmark.ts");
+
+    await headmark(files, options);
+  });
+
+/**
+ * 解析命令行参数并执行匹配的命令。
+ */
+export async function runCli(argv: string[] = process.argv): Promise<void> {
+  try {
+    cli.parse(argv, { run: false });
+
+    await cli.runMatchedCommand();
+  } catch (error: unknown) {
+    handleCliError(error);
+  }
+}
+
+function handleCliError(error: unknown): void {
+  logger.error(`[${pkg.name}] ${formatError(error)}`);
+  process.exitCode = 1;
+}
+
+function formatError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.stack ?? error.message;
+  }
+
+  return String(error);
+}
+
+void runCli();
+
+
+src/context.ts
+
+import { basename, extname, relative, resolve, sep } from "node:path";
+
+import type { PackageJson } from "pkg-types";
+
+import type { FileContext, HeadmarkContext } from "./types.js";
+
+/**
+ * 构造当前文件的模板上下文。
+ */
+export function createContext(
+  packageMetadata: PackageJson,
+  filePath: string,
+  cwd: string,
+): HeadmarkContext {
+  const absolutePath = resolve(cwd, filePath);
+  const relativePath = relative(cwd, absolutePath);
+  const fileName = basename(absolutePath);
+  const extension = extname(fileName);
+
+  const file: FileContext = {
+    path: relativePath.split(sep).join("/"),
+    name: fileName,
+    basename: fileName.slice(0, fileName.length - extension.length),
+    ext: extension,
+  };
+
+  return {
+    package: packageMetadata,
+    year: new Date().getFullYear(),
+    file,
+  };
+}
+
+
+src/file.ts
+
+import { readFile, writeFile } from "node:fs/promises";
+import { glob } from "node:fs/promises";
+import { resolve } from "node:path";
+
+import type { HeadmarkOptions } from "./types.js";
+
+type FindFilesOptions = Required<Pick<HeadmarkOptions, "exclude" | "cwd">>;
+/**
+ * 查找目标文件。
+ */
+export async function findFiles(
+  patterns: string | string[],
+  options: FindFilesOptions,
+): Promise<string[]> {
+  const { cwd, exclude } = options;
+  const files = new Set<string>();
+
+  for await (const file of glob(patterns, {
+    cwd,
+    exclude,
+  })) {
+    files.add(resolve(cwd, file));
+  }
+
+  return [...files];
+}
+
+/**
+ * 规范 banner 的尾部空白。
+ */
+function normalizeBanner(banner: string): string {
+  return banner.trimEnd();
+}
+
+/**
+ * 判断文件内容是否已经包含指定 banner。
+ */
+function hasBannerContent(content: string, banner: string): boolean {
+  const normalizedBanner = normalizeBanner(banner);
+
+  return (
+    content.startsWith(normalizedBanner) &&
+    (content.length === normalizedBanner.length ||
+      content.startsWith(`${normalizedBanner}\n`) ||
+      content.startsWith(`${normalizedBanner}\r\n`))
+  );
+}
+
+/**
+ * 检查文件是否已经包含当前 banner。
+ */
+export async function hasBanner(file: string, banner: string): Promise<boolean> {
+  const content = await readFile(file, "utf8");
+
+  return hasBannerContent(content, banner);
+}
+
+/**
+ * 在文件开头插入 banner。
+ *
+ * 返回 false 表示文件已经存在相同的 banner。
+ */
+export async function prependBanner(file: string, banner: string): Promise<boolean> {
+  const content = await readFile(file, "utf8");
+  const normalizedBanner = normalizeBanner(banner);
+
+  if (hasBannerContent(content, normalizedBanner)) {
+    return false;
+  }
+
+  const separator = content.length > 0 ? "\n\n" : "\n";
+
+  await writeFile(file, `${normalizedBanner}${separator}${content}`, "utf8");
+
+  return true;
+}
+
+
+src/headmark.ts
+
+import { readPackageJSON } from "pkg-types";
+
+import { createContext } from "./context.js";
+import { findFiles } from "./file.js";
+import { logger } from "./logger.ts";
+import { renderBanner } from "./renderer.ts";
+import type { HeadmarkOptions } from "./types.js";
+
+export const defaultOptions: Required<HeadmarkOptions> = {
+  cwd: process.cwd(),
+  template: "",
+  exclude: [],
+  dryRun: false,
+};
+
+export async function headmark(patterns: string[], options: HeadmarkOptions = {}): Promise<void> {
+  const { template, exclude, dryRun, cwd } = {
+    ...defaultOptions,
+    ...options,
+  };
+
+  const files = await findFiles(patterns, { cwd, exclude });
+
+  if (files.length === 0) {
+    logger.warn("No files matched the specified patterns.");
+    return;
+  }
+
+  const packageMetadata = await readPackageJSON(process.cwd());
+
+  for (const file of files) {
+    const context = createContext(packageMetadata, file, cwd);
+
+    const banner = await renderBanner({ template, context });
+
+    console.log(banner);
+
+    // if (await hasBanner(file, banner)) {
+    //   logger.info(`Unchanged: ${file}`);
+    //   continue;
+    // }
+
+    // if (dryRun) {
+    //   logger.info(`Would update: ${file}`);
+
+    //   continue;
+    // }
+
+    // await prependBanner(file, banner);
+
+    // logger.success(`Updated: ${file}`);
+  }
+}
+
+
+src/index.ts
+
+import type { DefineTemplate } from "./types.js";
+
+export type * from "./types.js";
+export { headmark } from "./headmark.js";
+
+export const defineTemplate = (template: DefineTemplate) => template;
+
+export { dedent } from "ts-dedent";
+
+
+src/load-template.ts
+
+import { createRequire } from "node:module";
+import { extname, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+
+import type { DefineTemplate } from "./types.ts";
+
+const require = createRequire(import.meta.url);
+
+const esmExtensions = new Set([".mjs", ".mts"]);
+const cjsExtensions = new Set([".cjs", ".cts"]);
+
+export default async function loadTemplate(templatePath: string): Promise<DefineTemplate> {
+  const filePath = resolve(templatePath);
+  const extension = extname(filePath).toLowerCase();
+
+  let template: unknown;
+
+  if (esmExtensions.has(extension)) {
+    const mod = await import(pathToFileURL(filePath).href);
+    template = mod.default;
+  } else if (cjsExtensions.has(extension)) {
+    template = require(filePath);
+  } else if (extension === ".js" || extension === ".ts") {
+    const mod = await import(pathToFileURL(filePath).href);
+    template = mod.default;
+  } else {
+    throw new TypeError(`Unsupported template extension: ${extension}`);
+  }
+
+  if (typeof template !== "function") {
+    throw new TypeError(`Template "${filePath}" must export a function as its default export.`);
+  }
+
+  return template as DefineTemplate;
+}
+
+
+src/logger.ts
+
+import { styleText } from "node:util";
+
+type LogMethod = (...messages: unknown[]) => void;
+type LogColor = Parameters<typeof styleText>[0];
+
+function formatMessage(label: string, color: LogColor, messages: unknown[]): string {
+  const message = messages
+    .map((item) =>
+      item instanceof Error ? item.message : typeof item === "string" ? item : String(item),
+    )
+    .join(" ");
+
+  return `${styleText(color, label)} ${message}`;
+}
+
+function write(label: string, color: LogColor): LogMethod {
+  return (...messages) => {
+    console.log(formatMessage(label, color, messages));
+  };
+}
+
+export const logger = {
+  log: (...messages: unknown[]) => console.log(...messages),
+  info: write("ℹ", "cyan"),
+  success: write("✔", "green"),
+  warn: write("⚠", "yellow"),
+  error: (...messages: unknown[]) => {
+    console.error(formatMessage("✖", "red", messages));
+  },
+  start: write("◐", "cyan"),
+};
+
+
+src/renderer.ts
+
+import loadTemplate from "./load-template.ts";
+import { defaultTemplate } from "./template.js";
+import type { HeadmarkContext } from "./types.js";
+
+export interface RenderOptions {
+  template?: string;
+  context: HeadmarkContext;
+}
+
+/**
+ * 渲染文件头部内容。
+ */
+export async function renderBanner({ template, context }: RenderOptions): Promise<string> {
+  let templateMethod;
+
+  if (template) {
+    templateMethod = await loadTemplate(template);
+  } else {
+    templateMethod = defaultTemplate;
+  }
+
+  const output = templateMethod(context);
+
+  if (typeof output !== "string") {
+    throw new Error("Failed to render banner template.");
+  }
+
+  return output;
+}
+
+
+src/template.ts
+
+import { defineTemplate, dedent } from "./index.ts";
+
+/**
+ * 默认 banner 模板。
+ */
+export const defaultTemplate = defineTemplate((ctx) => {
+  const { package: pkg, year, startYear } = ctx;
+
+  const copyright = startYear ? `${startYear}-${year}` : String(year);
+
+  return dedent`
+    /*!
+     * ${pkg.name} v${pkg.version}
+     * ${pkg.homepage}
+     *
+     * Copyright (c) ${copyright} ${pkg.author}
+     * Licensed under the ${pkg.license} license
+     */
+  `;
+});
+
+
+src/types.ts
+
+import type { PackageJson } from "pkg-types";
+
+/**
+ * 当前处理文件的信息。
+ */
+export interface FileContext {
+  /** 相对于运行目录的文件路径 */
+  path: string;
+
+  /** 文件名，包含扩展名 */
+  name: string;
+
+  /** 不包含扩展名的文件名 */
+  basename: string;
+
+  /** 文件扩展名，例如 .js、.css */
+  ext: string;
+}
+
+/**
+ * 自定义banner模板使用的上下文。
+ */
+export interface HeadmarkContext {
+  /** 项目元数据 */
+  package: PackageJson;
+
+  /** 当前年份 */
+  year: number;
+
+  /** 当前处理的文件 */
+  file: FileContext;
+
+  startYear?: number;
+
+  contributors?: string[];
+}
+
+export type DefineTemplate<TContext = HeadmarkContext> = (
+  context: TContext,
+) => string | Promise<string>;
+
+export interface HeadmarkOptions {
+  /**
+   * 工作目录，默认为当前进程的工作目录。
+   */
+  cwd?: string;
+
+  /**
+   * 自定义banner模板文件路径，比如：banner.ts banner.mjs等
+   */
+  template?: string;
+
+  /**
+   * 排除的文件或目录 Glob 模式
+   */
+  exclude?: string[];
+
+  /**
+   * 仅预览，不写入文件
+   */
+  dryRun?: boolean;
+}
