@@ -8,7 +8,7 @@
 [![codecov](https://codecov.io/github/ColoristLab/headmark/graph/badge.svg?token=YR846BMB6Y)](https://codecov.io/github/ColoristLab/headmark)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ColoristLab/headmark/blob/main/LICENSE)
 
-一个轻量级命令行工具，通过模板为文件添加头部注释。
+根据 package.json 生成文件头部注释的命令行工具。
 
 ## 安装
 
