@@ -96,3 +96,11 @@ export interface HeadmarkResult {
   /** 每个文件的处理结果 */
   files: HeadmarkFileResult[];
 }
+
+/**
+ * 用户自定义模板函数。
+ *
+ * @param context - 当前模板的上下文信息。
+ * @returns 生成的文件横幅字符串，支持同步或异步返回。
+ */
+export type HeadmarkTemplate = (context: HeadmarkContext) => string | Promise<string>;

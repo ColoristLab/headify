@@ -2,27 +2,21 @@ import { createRequire } from "node:module";
 import { extname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import type { HeadmarkContext } from "./types.ts";
+import type { HeadmarkTemplate } from "./types.ts";
 
 const require = createRequire(import.meta.url);
 
-const esmExtensions = new Set([".mjs", ".mts"]);
 const cjsExtensions = new Set([".cjs", ".cts"]);
 
-export type BannerTemplate = (context: HeadmarkContext) => string | Promise<string>;
-
-export default async function loadTemplate(templatePath: string): Promise<BannerTemplate> {
+export default async function loadTemplate(templatePath: string): Promise<HeadmarkTemplate> {
   const filePath = resolve(templatePath);
   const extension = extname(filePath).toLowerCase();
 
   let template: unknown;
 
-  if (esmExtensions.has(extension)) {
-    const mod = await import(pathToFileURL(filePath).href);
-    template = mod.default;
-  } else if (cjsExtensions.has(extension)) {
+  if (cjsExtensions.has(extension)) {
     template = require(filePath);
-  } else if (extension === ".js" || extension === ".ts") {
+  } else if ([".js", ".mjs", ".ts", ".mts"].includes(extension)) {
     const mod = await import(pathToFileURL(filePath).href);
     template = mod.default;
   } else {
@@ -33,5 +27,5 @@ export default async function loadTemplate(templatePath: string): Promise<Banner
     throw new TypeError(`Template "${filePath}" must export a function as its default export.`);
   }
 
-  return template as BannerTemplate;
+  return template as HeadmarkTemplate;
 }

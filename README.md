@@ -25,7 +25,7 @@ npm install -D headmark
 headmark "dist/**/*.{js,css}"
 
 # 使用自定义模板
-headmark "dist/**/*.js" --template banner.eta
+headmark "dist/**/*.js" --template banner.mjs
 
 # 排除文件
 headmark "dist/**/*.js" --exclude "dist/vendor/**"
