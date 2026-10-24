@@ -36,26 +36,33 @@ headmark "dist/**/*.js" --dry-run
 
 ## 自定义模板
 
-使用 [Eta](https://eta.js.org/) 模板语法编写文件头部。
+支持js、ts、mjs、cjs、mts、cts后缀的js文件导出默认函数
 
-创建 `banner.eta`：
+创建 `banner.mjs`：
 
-```eta
-/*!
- * <%= it.package.name %> v<%= it.package.version %>
- *
- * Copyright (c) <%= it.year %> <%= it.package.author %>
- * Licensed under the <%= it.package.license %> license
- */
+```js
+export default function (context) {
+  const contributors = ["jack", "tom"];
+
+  return dedent`
+    /*!
+     * ${context.package.name} v${context.package.version}
+     * Contributors: ${contributors.join(", ")}
+     * File: ${context.file.path}
+     */
+  `;
+}
 ```
 
 运行：
 
 ```bash
-headmark "dist/**/*.js" --template banner.eta
+headmark "dist/**/*.js" --template banner.mjs
 ```
 
 默认情况下，headmark 从项目的 `package.json` 读取元数据，并使用内置模板生成文件头部。
+
+## 上下文数据
 
 ## 命令行选项
 

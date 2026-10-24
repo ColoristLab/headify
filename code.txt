@@ -12,12 +12,14 @@ const cli = cac("headmark");
 cli.help().version(pkg.version);
 
 cli
-  .command("<files...>", "Prepend banner headers to files.", {
+  .command("<...files>", "Prepend banner headers to files.", {
     ignoreOptionDefaultValue: true,
-    allowUnknownOptions: false,
+    allowUnknownOptions: true,
   })
   .option("-t, --template <path>", "Path to Eta template file")
-  .option("-e, --exclude <patterns...>", "Exclude files or directories (supports glob)")
+  .option("-e, --exclude <...patterns>", "Exclude files or directories (supports glob)", {
+    type: [],
+  })
   .option("--dry-run", "Preview changes without writing files")
   .action(async (files: string[], options) => {
     const { headmark } = await import("./headmark.ts");
@@ -34,21 +36,9 @@ export async function runCli(argv: string[] = process.argv): Promise<void> {
 
     await cli.runMatchedCommand();
   } catch (error: unknown) {
-    handleCliError(error);
+    logger.error(error);
+    process.exitCode = 1;
   }
-}
-
-function handleCliError(error: unknown): void {
-  logger.error(`[${pkg.name}] ${formatError(error)}`);
-  process.exitCode = 1;
-}
-
-function formatError(error: unknown): string {
-  if (error instanceof Error) {
-    return error.stack ?? error.message;
-  }
-
-  return String(error);
 }
 
 void runCli();
@@ -92,15 +82,16 @@ export function createContext(
 
 src/file.ts
 
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, stat, writeFile } from "node:fs/promises";
 import { glob } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import type { HeadmarkOptions } from "./types.js";
 
 type FindFilesOptions = Required<Pick<HeadmarkOptions, "exclude" | "cwd">>;
+
 /**
- * 查找目标文件。
+ * 查找目标文件，只返回普通文件。
  */
 export async function findFiles(
   patterns: string | string[],
@@ -113,7 +104,12 @@ export async function findFiles(
     cwd,
     exclude,
   })) {
-    files.add(resolve(cwd, file));
+    const absolutePath = resolve(cwd, file);
+    const fileStat = await stat(absolutePath);
+
+    if (fileStat.isFile()) {
+      files.add(absolutePath);
+    }
   }
 
   return [...files];
@@ -162,7 +158,7 @@ export async function prependBanner(file: string, banner: string): Promise<boole
     return false;
   }
 
-  const separator = content.length > 0 ? "\n\n" : "\n";
+  const separator = content.length > 0 ? "\n" : "";
 
   await writeFile(file, `${normalizedBanner}${separator}${content}`, "utf8");
 
@@ -172,12 +168,16 @@ export async function prependBanner(file: string, banner: string): Promise<boole
 
 src/headmark.ts
 
-import { readPackageJSON } from "pkg-types";
+import { readFile } from "node:fs/promises";
+import { relative, resolve } from "node:path";
+import { styleText } from "node:util";
+
+import type { PackageJson } from "pkg-types";
 
 import { createContext } from "./context.js";
-import { findFiles } from "./file.js";
-import { logger } from "./logger.ts";
-import { renderBanner } from "./renderer.ts";
+import { findFiles, hasBanner, prependBanner } from "./file.js";
+import { logger } from "./logger.js";
+import { renderBanner, resolveTemplate } from "./renderer.js";
 import type { HeadmarkOptions } from "./types.js";
 
 export const defaultOptions: Required<HeadmarkOptions> = {
@@ -187,11 +187,57 @@ export const defaultOptions: Required<HeadmarkOptions> = {
   dryRun: false,
 };
 
+const colors = {
+  muted: "gray",
+  info: "cyan",
+  success: "green",
+} as const;
+
+/**
+ * 输出单个文件的处理结果。
+ *
+ * 目录路径使用灰色，文件名保留终端默认颜色。
+ * 未更改和预览状态单独显示状态标记。
+ */
+function logFile(path: string, status: "updated" | "unchanged" | "wouldUpdate"): void {
+  const separator = path.lastIndexOf("/");
+  const directory = separator === -1 ? "" : path.slice(0, separator + 1);
+  const filename = path.slice(separator + 1);
+
+  const suffix = {
+    updated: "",
+    unchanged: ` ${styleText(colors.muted, "(Unchanged)")}`,
+    wouldUpdate: ` ${styleText(colors.info, "(Would update)")}`,
+  }[status];
+
+  logger.info(`${styleText(colors.muted, directory)}${filename}${suffix}`);
+}
+
+/**
+ * 输出任务摘要。
+ */
+function logSummary(
+  updated: number,
+  unchanged: number,
+  elapsed: number,
+  dryRun: boolean,
+  wouldUpdate: number,
+): void {
+  const summary = dryRun
+    ? `Would update: ${wouldUpdate} Unchanged: ${unchanged}`
+    : `Updated: ${updated} Unchanged: ${unchanged}`;
+
+  logger.info(summary);
+  logger.success(`Completed in ${styleText(colors.success, `${elapsed} ms`)}`);
+}
+
 export async function headmark(patterns: string[], options: HeadmarkOptions = {}): Promise<void> {
   const { template, exclude, dryRun, cwd } = {
     ...defaultOptions,
     ...options,
   };
+
+  validateOptions(patterns, { template, exclude, dryRun, cwd });
 
   const files = await findFiles(patterns, { cwd, exclude });
 
@@ -200,41 +246,91 @@ export async function headmark(patterns: string[], options: HeadmarkOptions = {}
     return;
   }
 
-  const packageMetadata = await readPackageJSON(process.cwd());
+  const packagePath = resolve(cwd, "package.json");
+  const packageMetadata = JSON.parse(await readFile(packagePath, "utf8")) as PackageJson;
+
+  const version = packageMetadata.version ? ` v${packageMetadata.version}` : "";
+
+  logger.info(`headmark${version}`);
+  logger.info(`Matched ${files.length} files`);
+  logger.info(`Template: ${template || "default"}`);
+
+  if (dryRun) {
+    logger.info("Dry run: no files will be modified");
+  }
+
+  // 整个任务只加载一次模板。
+  const templateMethod = await resolveTemplate(template);
+  const startedAt = Date.now();
+
+  let updated = 0;
+  let unchanged = 0;
+  let wouldUpdate = 0;
 
   for (const file of files) {
     const context = createContext(packageMetadata, file, cwd);
+    const path = relative(cwd, file).replaceAll("\\", "/");
+    const banner = await renderBanner(templateMethod, context);
 
-    const banner = await renderBanner({ template, context });
+    if (dryRun) {
+      if (await hasBanner(file, banner)) {
+        unchanged++;
+        logFile(path, "unchanged");
+      } else {
+        wouldUpdate++;
+        logFile(path, "wouldUpdate");
+      }
 
-    console.log(banner);
+      continue;
+    }
 
-    // if (await hasBanner(file, banner)) {
-    //   logger.info(`Unchanged: ${file}`);
-    //   continue;
-    // }
+    if (await prependBanner(file, banner)) {
+      updated++;
+      logFile(path, "updated");
+    } else {
+      unchanged++;
+      logFile(path, "unchanged");
+    }
+  }
 
-    // if (dryRun) {
-    //   logger.info(`Would update: ${file}`);
+  const elapsed = Date.now() - startedAt;
 
-    //   continue;
-    // }
+  logSummary(updated, unchanged, elapsed, dryRun, wouldUpdate);
+}
 
-    // await prependBanner(file, banner);
+/**
+ * 验证 headmark 参数。
+ */
+function validateOptions(patterns: unknown, options: Required<HeadmarkOptions>): void {
+  if (!Array.isArray(patterns) || !patterns.every((pattern) => typeof pattern === "string")) {
+    throw new TypeError("Expected patterns to be an array of strings.");
+  }
 
-    // logger.success(`Updated: ${file}`);
+  if (typeof options.cwd !== "string") {
+    throw new TypeError('Expected "cwd" to be a string.');
+  }
+
+  if (typeof options.template !== "string") {
+    throw new TypeError('Expected "template" to be a string.');
+  }
+
+  if (
+    !Array.isArray(options.exclude) ||
+    !options.exclude.every((pattern) => typeof pattern === "string")
+  ) {
+    throw new TypeError('Expected "exclude" to be an array of strings.');
+  }
+
+  if (typeof options.dryRun !== "boolean") {
+    throw new TypeError('Expected "dryRun" to be a boolean.');
   }
 }
 
 
 src/index.ts
 
-import type { DefineTemplate } from "./types.js";
-
 export type * from "./types.js";
 export { headmark } from "./headmark.js";
-
-export const defineTemplate = (template: DefineTemplate) => template;
 
 export { dedent } from "ts-dedent";
 
@@ -245,14 +341,16 @@ import { createRequire } from "node:module";
 import { extname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import type { DefineTemplate } from "./types.ts";
+import type { HeadmarkContext } from "./types.ts";
 
 const require = createRequire(import.meta.url);
 
 const esmExtensions = new Set([".mjs", ".mts"]);
 const cjsExtensions = new Set([".cjs", ".cts"]);
 
-export default async function loadTemplate(templatePath: string): Promise<DefineTemplate> {
+export type BannerTemplate = (context: HeadmarkContext) => string | Promise<string>;
+
+export default async function loadTemplate(templatePath: string): Promise<BannerTemplate> {
   const filePath = resolve(templatePath);
   const extension = extname(filePath).toLowerCase();
 
@@ -274,7 +372,7 @@ export default async function loadTemplate(templatePath: string): Promise<Define
     throw new TypeError(`Template "${filePath}" must export a function as its default export.`);
   }
 
-  return template as DefineTemplate;
+  return template as BannerTemplate;
 }
 
 
@@ -284,62 +382,265 @@ import { styleText } from "node:util";
 
 type LogMethod = (...messages: unknown[]) => void;
 type LogColor = Parameters<typeof styleText>[0];
+type InspectColor = Exclude<LogColor, readonly unknown[]>;
 
-function formatMessage(label: string, color: LogColor, messages: unknown[]): string {
-  const message = messages
-    .map((item) =>
-      item instanceof Error ? item.message : typeof item === "string" ? item : String(item),
-    )
-    .join(" ");
+const colors = {
+  info: "cyan",
+  success: "green",
+  stack: "gray",
+  location: "cyan",
+} as const satisfies Record<string, InspectColor>;
 
-  return `${styleText(color, label)} ${message}`;
+/**
+ * 格式化带背景色的标签。
+ */
+function formatLabel(label: string, background: InspectColor): string {
+  return styleText(["black", "bold", background], ` ${label} `);
 }
 
-function write(label: string, color: LogColor): LogMethod {
+/**
+ * 将未知类型的值转换为字符串。
+ */
+function stringify(value: unknown): string {
+  if (value instanceof Error) {
+    return value.message;
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  try {
+    return String(value);
+  } catch {
+    return "[Unprintable value]";
+  }
+}
+
+/**
+ * 移除文件 URL 的协议前缀。
+ *
+ * 例如：
+ * file:///C:/project/src/index.ts:10:20
+ * -> C:/project/src/index.ts:10:20
+ */
+function normalizeStackLocation(location: string): string {
+  return location.replace(/^file:\/\//, "");
+}
+
+/**
+ * 格式化错误堆栈行。
+ *
+ * - 只有 `at` 使用灰色。
+ * - 函数名和其他普通文本使用终端默认颜色。
+ * - 文件路径及行列号使用青色。
+ * - 移除 file:/// 前缀。
+ * - 原始缩进减少两个空格。
+ */
+function formatStackLine(line: string): string {
+  const trimmed = line.trimStart();
+  const originalIndent = line.slice(0, line.length - trimmed.length);
+
+  // 缩进
+  const indent = originalIndent.slice(0, Math.max(0, originalIndent.length - 0));
+
+  const frame = trimmed.match(/^(at)(\s+)(.*)$/);
+
+  if (!frame) {
+    return indent + styleText(colors.stack, trimmed);
+  }
+
+  const [, prefix, separator, content] = frame;
+
+  if (prefix === undefined || separator === undefined || content === undefined) {
+    return indent + styleText(colors.stack, trimmed);
+  }
+
+  // at functionName (file:///path/file.mjs:10:20)
+  const parenthesized = content.match(/^(.*?)\s+\((.+)\)$/);
+
+  if (parenthesized) {
+    const [, method, rawLocation] = parenthesized;
+
+    if (method !== undefined && rawLocation !== undefined) {
+      const location = normalizeStackLocation(rawLocation);
+
+      return (
+        indent +
+        styleText(colors.stack, prefix) +
+        separator +
+        method +
+        " (" +
+        styleText(colors.location, location) +
+        ")"
+      );
+    }
+  }
+
+  // at file:///path/file.mjs:10:20
+  // at async node:internal/modules/esm/loader:646:26
+  const plainLocation = content.match(/^(.*?)(:\d+(?::\d+)?)$/);
+
+  if (plainLocation) {
+    const [, rawFile, position] = plainLocation;
+
+    if (rawFile !== undefined && position !== undefined) {
+      const file = normalizeStackLocation(rawFile);
+
+      // async 等前缀保持默认颜色，仅路径和行列号使用青色。
+      const asyncPrefix = file.match(/^(async\s+)(.+)$/);
+
+      if (asyncPrefix) {
+        const [, asyncText, actualFile] = asyncPrefix;
+
+        if (asyncText !== undefined && actualFile !== undefined) {
+          return (
+            indent +
+            styleText(colors.stack, prefix) +
+            separator +
+            asyncText +
+            styleText(colors.location, actualFile + position)
+          );
+        }
+      }
+
+      return (
+        indent +
+        styleText(colors.stack, prefix) +
+        separator +
+        styleText(colors.location, file + position)
+      );
+    }
+  }
+
+  // 无法识别的堆栈格式：只将 at 设置为灰色。
+  return indent + styleText(colors.stack, prefix) + separator + content;
+}
+
+/**
+ * 格式化错误堆栈，支持递归处理 Error.cause。
+ */
+function formatError(error: Error, level = 0): string[] {
+  const lines: string[] = [];
+  const indent = "  ".repeat(level);
+
+  if (level > 0) {
+    lines.push(`${indent}${styleText("yellow", "Caused by:")} ${error.name}: ${error.message}`);
+  }
+
+  if (error.stack) {
+    const stackLines = error.stack.split("\n").slice(1);
+
+    for (const line of stackLines) {
+      lines.push(`${indent}${formatStackLine(line)}`);
+    }
+  }
+
+  if (error.cause instanceof Error) {
+    if (lines.length > 0) {
+      lines.push("");
+    }
+
+    lines.push(...formatError(error.cause, level + 1));
+  }
+
+  return lines;
+}
+
+/**
+ * 输出上下各带一行空行的日志。
+ */
+function writeSpaced(callback: () => void): void {
+  console.log();
+  callback();
+  console.log();
+}
+
+/**
+ * 创建普通日志方法。
+ */
+function write(label: string, color: InspectColor): LogMethod {
   return (...messages) => {
-    console.log(formatMessage(label, color, messages));
+    console.log(`${styleText(color, label)} ${messages.map(stringify).join(" ")}`);
+  };
+}
+
+/**
+ * 创建带背景色标签的警告日志方法。
+ */
+function writeBadge(label: string, background: InspectColor): LogMethod {
+  return (...messages) => {
+    writeSpaced(() => {
+      console.warn(`${formatLabel(label, background)} ${messages.map(stringify).join(" ")}`);
+    });
+  };
+}
+
+/**
+ * 创建错误日志方法。
+ */
+function writeError(): LogMethod {
+  return (...messages) => {
+    writeSpaced(() => {
+      for (const message of messages) {
+        if (!(message instanceof Error)) {
+          console.error(`${formatLabel("ERROR", "bgRed")} ${stringify(message)}`);
+          continue;
+        }
+
+        // 输出错误提示。
+        console.error(`${formatLabel("ERROR", "bgRed")} ${message.message}`);
+
+        // 格式化错误堆栈。
+        const stack = formatError(message);
+
+        if (stack.length > 0) {
+          // 错误提示与堆栈之间保留一行空行。
+          console.error();
+          console.error(stack.join("\n"));
+        }
+      }
+    });
   };
 }
 
 export const logger = {
   log: (...messages: unknown[]) => console.log(...messages),
-  info: write("ℹ", "cyan"),
-  success: write("✔", "green"),
-  warn: write("⚠", "yellow"),
-  error: (...messages: unknown[]) => {
-    console.error(formatMessage("✖", "red", messages));
-  },
-  start: write("◐", "cyan"),
+
+  info: write("ℹ", colors.info),
+
+  success: write("✔", colors.success),
+
+  warn: writeBadge("WARN", "bgYellow"),
+
+  error: writeError(),
 };
 
 
 src/renderer.ts
 
-import loadTemplate from "./load-template.ts";
-import { defaultTemplate } from "./template.js";
+import loadTemplate, { type BannerTemplate } from "./load-template.ts";
+import defaultTemplate from "./template.js";
 import type { HeadmarkContext } from "./types.js";
 
-export interface RenderOptions {
-  template?: string;
-  context: HeadmarkContext;
+/**
+ * 加载模板函数。
+ */
+export async function resolveTemplate(template?: string): Promise<BannerTemplate> {
+  return template ? loadTemplate(template) : defaultTemplate;
 }
 
 /**
  * 渲染文件头部内容。
  */
-export async function renderBanner({ template, context }: RenderOptions): Promise<string> {
-  let templateMethod;
-
-  if (template) {
-    templateMethod = await loadTemplate(template);
-  } else {
-    templateMethod = defaultTemplate;
-  }
-
-  const output = templateMethod(context);
+export async function renderBanner(
+  template: BannerTemplate,
+  context: HeadmarkContext,
+): Promise<string> {
+  const output = await template(context);
 
   if (typeof output !== "string") {
-    throw new Error("Failed to render banner template.");
+    throw new TypeError("Failed to render banner template.");
   }
 
   return output;
@@ -348,12 +649,14 @@ export async function renderBanner({ template, context }: RenderOptions): Promis
 
 src/template.ts
 
-import { defineTemplate, dedent } from "./index.ts";
+import { dedent } from "ts-dedent";
+
+import type { HeadmarkContext } from "./types.ts";
 
 /**
  * 默认 banner 模板。
  */
-export const defaultTemplate = defineTemplate((ctx) => {
+export default (ctx: HeadmarkContext) => {
   const { package: pkg, year, startYear } = ctx;
 
   const copyright = startYear ? `${startYear}-${year}` : String(year);
@@ -367,7 +670,7 @@ export const defaultTemplate = defineTemplate((ctx) => {
      * Licensed under the ${pkg.license} license
      */
   `;
-});
+};
 
 
 src/types.ts
@@ -405,13 +708,7 @@ export interface HeadmarkContext {
   file: FileContext;
 
   startYear?: number;
-
-  contributors?: string[];
 }
-
-export type DefineTemplate<TContext = HeadmarkContext> = (
-  context: TContext,
-) => string | Promise<string>;
 
 export interface HeadmarkOptions {
   /**

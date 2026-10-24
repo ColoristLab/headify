@@ -10,17 +10,24 @@ const cli = cac("headmark");
 cli.help().version(pkg.version);
 
 cli
-  .command("<files...>", "Prepend banner headers to files.", {
+  .command("<...files>", "Prepend banner headers to files.", {
     ignoreOptionDefaultValue: true,
-    allowUnknownOptions: false,
+    allowUnknownOptions: true,
   })
   .option("-t, --template <path>", "Path to Eta template file")
-  .option("-e, --exclude <patterns...>", "Exclude files or directories (supports glob)")
+  .option("-e, --exclude <...patterns>", "Exclude files or directories (supports glob)", {
+    type: [],
+  })
   .option("--dry-run", "Preview changes without writing files")
   .action(async (files: string[], options) => {
-    const { headmark } = await import("./headmark.ts");
+    const [{ headmark }, { reportResult }] = await Promise.all([
+      import("./headmark.ts"),
+      import("./reporter.ts"),
+    ]);
 
-    await headmark(files, options);
+    const result = await headmark(files, options);
+
+    reportResult(pkg.version, result);
   });
 
 /**
@@ -32,21 +39,9 @@ export async function runCli(argv: string[] = process.argv): Promise<void> {
 
     await cli.runMatchedCommand();
   } catch (error: unknown) {
-    handleCliError(error);
+    logger.error(error);
+    process.exitCode = 1;
   }
-}
-
-function handleCliError(error: unknown): void {
-  logger.error(`[${pkg.name}] ${formatError(error)}`);
-  process.exitCode = 1;
-}
-
-function formatError(error: unknown): string {
-  if (error instanceof Error) {
-    return error.stack ?? error.message;
-  }
-
-  return String(error);
 }
 
 void runCli();

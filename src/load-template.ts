@@ -2,14 +2,16 @@ import { createRequire } from "node:module";
 import { extname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import type { DefineTemplate } from "./types.ts";
+import type { HeadmarkContext } from "./types.ts";
 
 const require = createRequire(import.meta.url);
 
 const esmExtensions = new Set([".mjs", ".mts"]);
 const cjsExtensions = new Set([".cjs", ".cts"]);
 
-export default async function loadTemplate(templatePath: string): Promise<DefineTemplate> {
+export type BannerTemplate = (context: HeadmarkContext) => string | Promise<string>;
+
+export default async function loadTemplate(templatePath: string): Promise<BannerTemplate> {
   const filePath = resolve(templatePath);
   const extension = extname(filePath).toLowerCase();
 
@@ -31,5 +33,5 @@ export default async function loadTemplate(templatePath: string): Promise<Define
     throw new TypeError(`Template "${filePath}" must export a function as its default export.`);
   }
 
-  return template as DefineTemplate;
+  return template as BannerTemplate;
 }

@@ -1,12 +1,13 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, stat, writeFile } from "node:fs/promises";
 import { glob } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import type { HeadmarkOptions } from "./types.js";
 
 type FindFilesOptions = Required<Pick<HeadmarkOptions, "exclude" | "cwd">>;
+
 /**
- * 查找目标文件。
+ * 查找目标文件，只返回普通文件。
  */
 export async function findFiles(
   patterns: string | string[],
@@ -19,7 +20,12 @@ export async function findFiles(
     cwd,
     exclude,
   })) {
-    files.add(resolve(cwd, file));
+    const absolutePath = resolve(cwd, file);
+    const fileStat = await stat(absolutePath);
+
+    if (fileStat.isFile()) {
+      files.add(absolutePath);
+    }
   }
 
   return [...files];
@@ -68,7 +74,7 @@ export async function prependBanner(file: string, banner: string): Promise<boole
     return false;
   }
 
-  const separator = content.length > 0 ? "\n\n" : "\n";
+  const separator = content.length > 0 ? "\n" : "";
 
   await writeFile(file, `${normalizedBanner}${separator}${content}`, "utf8");
 

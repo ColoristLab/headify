@@ -31,13 +31,7 @@ export interface HeadmarkContext {
   file: FileContext;
 
   startYear?: number;
-
-  contributors?: string[];
 }
-
-export type DefineTemplate<TContext = HeadmarkContext> = (
-  context: TContext,
-) => string | Promise<string>;
 
 export interface HeadmarkOptions {
   /**
@@ -59,4 +53,46 @@ export interface HeadmarkOptions {
    * 仅预览，不写入文件
    */
   dryRun?: boolean;
+}
+
+export type FileStatus = "updated" | "unchanged" | "wouldUpdate";
+
+/**
+ * 单个文件的处理结果。
+ */
+export interface HeadmarkFileResult {
+  /** 相对于工作目录的文件路径，统一使用 / */
+  path: string;
+
+  /** 文件处理状态 */
+  status: FileStatus;
+}
+
+/**
+ * 一次 headmark 任务的执行结果。
+ */
+export interface HeadmarkResult {
+  /** 使用的模板路径，空字符串表示默认模板 */
+  template: string;
+
+  /** 是否为预览模式 */
+  dryRun: boolean;
+
+  /** 匹配到的文件总数 */
+  total: number;
+
+  /** 实际更新的文件数 */
+  updated: number;
+
+  /** 已存在相同 banner、无需修改的文件数 */
+  unchanged: number;
+
+  /** 预览模式下预计更新的文件数 */
+  wouldUpdate: number;
+
+  /** 本次任务的总耗时，单位毫秒 */
+  elapsed: number;
+
+  /** 每个文件的处理结果 */
+  files: HeadmarkFileResult[];
 }
