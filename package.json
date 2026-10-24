@@ -1,7 +1,7 @@
 {
   "name": "headmark",
   "version": "0.0.0",
-  "description": "CLI to generate file banners from package data.",
+  "description": "Add file header banners",
   "keywords": [
     "banner",
     "head",

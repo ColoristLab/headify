@@ -22,9 +22,14 @@ cli
   })
   .option("--dry-run", "Preview changes without writing files")
   .action(async (files: string[], options) => {
-    const { headmark } = await import("./headmark.ts");
+    const [{ headmark }, { reportResult }] = await Promise.all([
+      import("./headmark.ts"),
+      import("./reporter.ts"),
+    ]);
 
-    await headmark(files, options);
+    const result = await headmark(files, options);
+
+    reportResult(pkg.version, result);
   });
 
 /**
@@ -170,15 +175,13 @@ src/headmark.ts
 
 import { readFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
-import { styleText } from "node:util";
 
 import type { PackageJson } from "pkg-types";
 
 import { createContext } from "./context.js";
 import { findFiles, hasBanner, prependBanner } from "./file.js";
-import { logger } from "./logger.js";
 import { renderBanner, resolveTemplate } from "./renderer.js";
-import type { HeadmarkOptions } from "./types.js";
+import type { FileStatus, HeadmarkFileResult, HeadmarkOptions, HeadmarkResult } from "./types.js";
 
 export const defaultOptions: Required<HeadmarkOptions> = {
   cwd: process.cwd(),
@@ -187,81 +190,43 @@ export const defaultOptions: Required<HeadmarkOptions> = {
   dryRun: false,
 };
 
-const colors = {
-  muted: "gray",
-  info: "cyan",
-  success: "green",
-} as const;
-
-/**
- * 输出单个文件的处理结果。
- *
- * 目录路径使用灰色，文件名保留终端默认颜色。
- * 未更改和预览状态单独显示状态标记。
- */
-function logFile(path: string, status: "updated" | "unchanged" | "wouldUpdate"): void {
-  const separator = path.lastIndexOf("/");
-  const directory = separator === -1 ? "" : path.slice(0, separator + 1);
-  const filename = path.slice(separator + 1);
-
-  const suffix = {
-    updated: "",
-    unchanged: ` ${styleText(colors.muted, "(Unchanged)")}`,
-    wouldUpdate: ` ${styleText(colors.info, "(Would update)")}`,
-  }[status];
-
-  logger.info(`${styleText(colors.muted, directory)}${filename}${suffix}`);
-}
-
-/**
- * 输出任务摘要。
- */
-function logSummary(
-  updated: number,
-  unchanged: number,
-  elapsed: number,
-  dryRun: boolean,
-  wouldUpdate: number,
-): void {
-  const summary = dryRun
-    ? `Would update: ${wouldUpdate} Unchanged: ${unchanged}`
-    : `Updated: ${updated} Unchanged: ${unchanged}`;
-
-  logger.info(summary);
-  logger.success(`Completed in ${styleText(colors.success, `${elapsed} ms`)}`);
-}
-
-export async function headmark(patterns: string[], options: HeadmarkOptions = {}): Promise<void> {
-  const { template, exclude, dryRun, cwd } = {
+export async function headmark(
+  patterns: string[],
+  options: HeadmarkOptions = {},
+): Promise<HeadmarkResult> {
+  const config = {
     ...defaultOptions,
     ...options,
   };
 
-  validateOptions(patterns, { template, exclude, dryRun, cwd });
+  validateOptions(patterns, config);
+
+  const { cwd, template, exclude, dryRun } = config;
+  const startedAt = Date.now();
 
   const files = await findFiles(patterns, { cwd, exclude });
 
+  // 没有匹配文件时直接返回空结果，不读取 package.json。
   if (files.length === 0) {
-    logger.warn("No files matched the specified patterns.");
-    return;
+    return {
+      template,
+      dryRun,
+      total: 0,
+      updated: 0,
+      unchanged: 0,
+      wouldUpdate: 0,
+      elapsed: Date.now() - startedAt,
+      files: [],
+    };
   }
 
   const packagePath = resolve(cwd, "package.json");
   const packageMetadata = JSON.parse(await readFile(packagePath, "utf8")) as PackageJson;
 
-  const version = packageMetadata.version ? ` v${packageMetadata.version}` : "";
-
-  logger.info(`headmark${version}`);
-  logger.info(`Matched ${files.length} files`);
-  logger.info(`Template: ${template || "default"}`);
-
-  if (dryRun) {
-    logger.info("Dry run: no files will be modified");
-  }
-
   // 整个任务只加载一次模板。
   const templateMethod = await resolveTemplate(template);
-  const startedAt = Date.now();
+
+  const results: HeadmarkFileResult[] = [];
 
   let updated = 0;
   let unchanged = 0;
@@ -272,30 +237,37 @@ export async function headmark(patterns: string[], options: HeadmarkOptions = {}
     const path = relative(cwd, file).replaceAll("\\", "/");
     const banner = await renderBanner(templateMethod, context);
 
+    let status: FileStatus;
+
     if (dryRun) {
       if (await hasBanner(file, banner)) {
         unchanged++;
-        logFile(path, "unchanged");
+        status = "unchanged";
       } else {
         wouldUpdate++;
-        logFile(path, "wouldUpdate");
+        status = "wouldUpdate";
       }
-
-      continue;
-    }
-
-    if (await prependBanner(file, banner)) {
+    } else if (await prependBanner(file, banner)) {
       updated++;
-      logFile(path, "updated");
+      status = "updated";
     } else {
       unchanged++;
-      logFile(path, "unchanged");
+      status = "unchanged";
     }
+
+    results.push({ path, status });
   }
 
-  const elapsed = Date.now() - startedAt;
-
-  logSummary(updated, unchanged, elapsed, dryRun, wouldUpdate);
+  return {
+    template,
+    dryRun,
+    total: results.length,
+    updated,
+    unchanged,
+    wouldUpdate,
+    elapsed: Date.now() - startedAt,
+    files: results,
+  };
 }
 
 /**
@@ -341,27 +313,21 @@ import { createRequire } from "node:module";
 import { extname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import type { HeadmarkContext } from "./types.ts";
+import type { HeadmarkTemplate } from "./types.ts";
 
 const require = createRequire(import.meta.url);
 
-const esmExtensions = new Set([".mjs", ".mts"]);
 const cjsExtensions = new Set([".cjs", ".cts"]);
 
-export type BannerTemplate = (context: HeadmarkContext) => string | Promise<string>;
-
-export default async function loadTemplate(templatePath: string): Promise<BannerTemplate> {
+export default async function loadTemplate(templatePath: string): Promise<HeadmarkTemplate> {
   const filePath = resolve(templatePath);
   const extension = extname(filePath).toLowerCase();
 
   let template: unknown;
 
-  if (esmExtensions.has(extension)) {
-    const mod = await import(pathToFileURL(filePath).href);
-    template = mod.default;
-  } else if (cjsExtensions.has(extension)) {
+  if (cjsExtensions.has(extension)) {
     template = require(filePath);
-  } else if (extension === ".js" || extension === ".ts") {
+  } else if ([".js", ".mjs", ".ts", ".mts"].includes(extension)) {
     const mod = await import(pathToFileURL(filePath).href);
     template = mod.default;
   } else {
@@ -372,7 +338,7 @@ export default async function loadTemplate(templatePath: string): Promise<Banner
     throw new TypeError(`Template "${filePath}" must export a function as its default export.`);
   }
 
-  return template as BannerTemplate;
+  return template as HeadmarkTemplate;
 }
 
 
@@ -619,14 +585,14 @@ export const logger = {
 
 src/renderer.ts
 
-import loadTemplate, { type BannerTemplate } from "./load-template.ts";
+import loadTemplate from "./load-template.ts";
 import defaultTemplate from "./template.js";
-import type { HeadmarkContext } from "./types.js";
+import type { HeadmarkContext, HeadmarkTemplate } from "./types.js";
 
 /**
  * 加载模板函数。
  */
-export async function resolveTemplate(template?: string): Promise<BannerTemplate> {
+export async function resolveTemplate(template?: string): Promise<HeadmarkTemplate> {
   return template ? loadTemplate(template) : defaultTemplate;
 }
 
@@ -634,7 +600,7 @@ export async function resolveTemplate(template?: string): Promise<BannerTemplate
  * 渲染文件头部内容。
  */
 export async function renderBanner(
-  template: BannerTemplate,
+  template: HeadmarkTemplate,
   context: HeadmarkContext,
 ): Promise<string> {
   const output = await template(context);
@@ -644,6 +610,66 @@ export async function renderBanner(
   }
 
   return output;
+}
+
+
+src/reporter.ts
+
+import { styleText } from "node:util";
+
+import { logger } from "./logger.js";
+import type { FileStatus, HeadmarkResult } from "./types.js";
+
+const colors = {
+  muted: "gray",
+  info: "cyan",
+  success: "green",
+} as const;
+
+/**
+ * 输出单个文件的处理结果。
+ */
+function reportFile(path: string, status: FileStatus): void {
+  const separator = path.lastIndexOf("/");
+  const directory = separator === -1 ? "" : path.slice(0, separator + 1);
+  const filename = path.slice(separator + 1);
+
+  const suffix = {
+    updated: "",
+    unchanged: ` ${styleText(colors.muted, "(Unchanged)")}`,
+    wouldUpdate: ` ${styleText(colors.info, "(Would update)")}`,
+  }[status];
+
+  logger.info(`${styleText(colors.muted, directory)}${filename}${suffix}`);
+}
+
+/**
+ * 根据任务结果输出控制台报告。
+ */
+export function reportResult(cliVersion: string, result: HeadmarkResult): void {
+  if (result.total === 0) {
+    logger.warn("No files matched the specified patterns.");
+    return;
+  }
+
+  logger.info(`headmark v${cliVersion}`);
+  logger.info(`Matched ${result.total} files`);
+  logger.info(`Template: ${result.template || "default"}`);
+
+  if (result.dryRun) {
+    logger.info("Dry run: no files will be modified");
+  }
+
+  for (const file of result.files) {
+    reportFile(file.path, file.status);
+  }
+
+  const summary = result.dryRun
+    ? `Would update: ${result.wouldUpdate} Unchanged: ${result.unchanged}`
+    : `Updated: ${result.updated} Unchanged: ${result.unchanged}`;
+
+  logger.info(summary);
+  logger.success(`Completed in ${styleText(colors.success, `${result.elapsed} ms`)}`);
 }
 
 
@@ -731,3 +757,53 @@ export interface HeadmarkOptions {
    */
   dryRun?: boolean;
 }
+
+export type FileStatus = "updated" | "unchanged" | "wouldUpdate";
+
+/**
+ * 单个文件的处理结果。
+ */
+export interface HeadmarkFileResult {
+  /** 相对于工作目录的文件路径，统一使用 / */
+  path: string;
+
+  /** 文件处理状态 */
+  status: FileStatus;
+}
+
+/**
+ * 一次 headmark 任务的执行结果。
+ */
+export interface HeadmarkResult {
+  /** 使用的模板路径，空字符串表示默认模板 */
+  template: string;
+
+  /** 是否为预览模式 */
+  dryRun: boolean;
+
+  /** 匹配到的文件总数 */
+  total: number;
+
+  /** 实际更新的文件数 */
+  updated: number;
+
+  /** 已存在相同 banner、无需修改的文件数 */
+  unchanged: number;
+
+  /** 预览模式下预计更新的文件数 */
+  wouldUpdate: number;
+
+  /** 本次任务的总耗时，单位毫秒 */
+  elapsed: number;
+
+  /** 每个文件的处理结果 */
+  files: HeadmarkFileResult[];
+}
+
+/**
+ * 用户自定义模板函数。
+ *
+ * @param context - 当前模板的上下文信息。
+ * @returns 生成的文件横幅字符串，支持同步或异步返回。
+ */
+export type HeadmarkTemplate = (context: HeadmarkContext) => string | Promise<string>;

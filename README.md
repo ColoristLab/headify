@@ -1,19 +1,19 @@
-# headmark
+# headify
 
 [![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-048754?logo=buymeacoffee)](https://www.lujiahao.com/sponsor)
 [![TypeScript](https://img.shields.io/badge/%3C%2F%3E-TypeScript-%230074c1.svg)](https://www.typescriptlang.org/)
-[![Test](https://img.shields.io/github/actions/workflow/status/ColoristLab/headmark/tests.yml?label=Test&logo=github&style=flat-square&branch=main)](https://github.com/ColoristLab/headmark/actions/workflows/tests.yml)
-[![Node](https://img.shields.io/node/v/headmark.svg)](https://nodejs.org/en/about/previous-releases)
+[![Test](https://img.shields.io/github/actions/workflow/status/ColoristLab/headify/tests.yml?label=Test&logo=github&style=flat-square&branch=main)](https://github.com/ColoristLab/headify/actions/workflows/tests.yml)
+[![Node](https://img.shields.io/node/v/headify.svg)](https://nodejs.org/en/about/previous-releases)
 [![Vitest](https://img.shields.io/badge/tested%20with-vitest-fcc72b.svg?logo=vitest)](https://vitest.dev/)
-[![codecov](https://codecov.io/github/ColoristLab/headmark/graph/badge.svg?token=YR846BMB6Y)](https://codecov.io/github/ColoristLab/headmark)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ColoristLab/headmark/blob/main/LICENSE)
+[![codecov](https://codecov.io/github/ColoristLab/headify/graph/badge.svg?token=YR846BMB6Y)](https://codecov.io/github/ColoristLab/headify)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ColoristLab/headify/blob/main/LICENSE)
 
-根据 package.json 生成文件头部注释的命令行工具。
+为文件添加头部横幅注释的命令行工具，默认从 package.json 读取项目信息。
 
 ## 安装
 
 ```bash
-npm install -D headmark
+npm install -D headify
 ```
 
 ## 使用
@@ -22,16 +22,16 @@ npm install -D headmark
 
 ```bash
 # 使用默认模板
-headmark "dist/**/*.{js,css}"
+headify "dist/**/*.{js,css}"
 
 # 使用自定义模板
-headmark "dist/**/*.js" --template banner.mjs
+headify "dist/**/*.js" --template banner.mjs
 
 # 排除文件
-headmark "dist/**/*.js" --exclude "dist/vendor/**"
+headify "dist/**/*.js" --exclude "dist/vendor/**"
 
 # 预览变更
-headmark "dist/**/*.js" --dry-run
+headify "dist/**/*.js" --dry-run
 ```
 
 ## 自定义模板
@@ -57,10 +57,10 @@ export default function (context) {
 运行：
 
 ```bash
-headmark "dist/**/*.js" --template banner.mjs
+headify "dist/**/*.js" --template banner.mjs
 ```
 
-默认情况下，headmark 从项目的 `package.json` 读取元数据，并使用内置模板生成文件头部。
+默认情况下，headify 从项目的 `package.json` 读取元数据，并使用内置模板生成文件头部。
 
 ## 上下文数据
 
