@@ -2,7 +2,7 @@ import { basename, extname, relative, resolve, sep } from "node:path";
 
 import type { PackageJson } from "pkg-types";
 
-import type { FileContext, HeadmarkContext } from "./types.js";
+import type { FileInfo, TemplateContext } from "./types.js";
 
 /**
  * 构造当前文件的模板上下文。
@@ -11,13 +11,13 @@ export function createContext(
   packageMetadata: PackageJson,
   filePath: string,
   cwd: string,
-): HeadmarkContext {
+): TemplateContext {
   const absolutePath = resolve(cwd, filePath);
   const relativePath = relative(cwd, absolutePath);
   const fileName = basename(absolutePath);
   const extension = extname(fileName);
 
-  const file: FileContext = {
+  const file: FileInfo = {
     path: relativePath.split(sep).join("/"),
     name: fileName,
     basename: fileName.slice(0, fileName.length - extension.length),

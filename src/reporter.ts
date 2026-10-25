@@ -1,7 +1,8 @@
 import { styleText } from "node:util";
 
+import pkg from "../package.json" with { type: "json" };
 import { logger } from "./logger.js";
-import type { FileStatus, HeadmarkResult } from "./types.js";
+import type { FileStatus, HeadifyResult } from "./types.js";
 
 const colors = {
   muted: "gray",
@@ -29,13 +30,13 @@ function reportFile(path: string, status: FileStatus): void {
 /**
  * 根据任务结果输出控制台报告。
  */
-export function reportResult(cliVersion: string, result: HeadmarkResult): void {
+export function reportResult(cliVersion: string, result: HeadifyResult): void {
   if (result.total === 0) {
     logger.warn("No files matched the specified patterns.");
     return;
   }
 
-  logger.info(`headmark v${cliVersion}`);
+  logger.info(`${pkg.name} v${cliVersion}`);
   logger.info(`Matched ${result.total} files`);
   logger.info(`Template: ${result.template || "default"}`);
 

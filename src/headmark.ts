@@ -6,9 +6,9 @@ import type { PackageJson } from "pkg-types";
 import { createContext } from "./context.js";
 import { findFiles, hasBanner, prependBanner } from "./file.js";
 import { renderBanner, resolveTemplate } from "./renderer.js";
-import type { FileStatus, HeadmarkFileResult, HeadmarkOptions, HeadmarkResult } from "./types.js";
+import type { FileStatus, FileResult, HeadifyOptions, HeadifyResult } from "./types.js";
 
-export const defaultOptions: Required<HeadmarkOptions> = {
+export const defaultOptions: Required<HeadifyOptions> = {
   cwd: process.cwd(),
   template: "",
   exclude: [],
@@ -17,8 +17,8 @@ export const defaultOptions: Required<HeadmarkOptions> = {
 
 export async function headmark(
   patterns: string[],
-  options: HeadmarkOptions = {},
-): Promise<HeadmarkResult> {
+  options: HeadifyOptions = {},
+): Promise<HeadifyResult> {
   const config = {
     ...defaultOptions,
     ...options,
@@ -51,7 +51,7 @@ export async function headmark(
   // 整个任务只加载一次模板。
   const templateMethod = await resolveTemplate(template);
 
-  const results: HeadmarkFileResult[] = [];
+  const results: FileResult[] = [];
 
   let updated = 0;
   let unchanged = 0;
@@ -98,7 +98,7 @@ export async function headmark(
 /**
  * 验证 headmark 参数。
  */
-function validateOptions(patterns: unknown, options: Required<HeadmarkOptions>): void {
+function validateOptions(patterns: unknown, options: Required<HeadifyOptions>): void {
   if (!Array.isArray(patterns) || !patterns.every((pattern) => typeof pattern === "string")) {
     throw new TypeError("Expected patterns to be an array of strings.");
   }

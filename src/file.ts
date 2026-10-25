@@ -2,9 +2,9 @@ import { readFile, stat, writeFile } from "node:fs/promises";
 import { glob } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import type { HeadmarkOptions } from "./types.js";
+import type { HeadifyOptions } from "./types.js";
 
-type FindFilesOptions = Required<Pick<HeadmarkOptions, "exclude" | "cwd">>;
+type FindFilesOptions = Required<Pick<HeadifyOptions, "exclude" | "cwd">>;
 
 /**
  * 查找目标文件，只返回普通文件。

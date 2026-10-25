@@ -32,4 +32,4 @@ headify 默认读取项目 `package.json` 中的元数据，并使用内置模�
 
 ## 文档
 
-完整文档请访问 [headify 文档站点](https://ColoristLab.github.io/headify/)
+完整文档请访问 [headify 文档站点](https://ColoristLab.github.io/headify/)。

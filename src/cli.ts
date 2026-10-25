@@ -5,7 +5,7 @@ import cac from "cac";
 import pkg from "../package.json" with { type: "json" };
 import { logger } from "./logger.ts";
 
-const cli = cac("headmark");
+const cli = cac(pkg.name);
 
 cli.help().version(pkg.version);
 

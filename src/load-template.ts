@@ -2,13 +2,13 @@ import { createRequire } from "node:module";
 import { extname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import type { HeadmarkTemplate } from "./types.ts";
+import type { BannerTemplate } from "./types.ts";
 
 const require = createRequire(import.meta.url);
 
 const cjsExtensions = new Set([".cjs", ".cts"]);
 
-export default async function loadTemplate(templatePath: string): Promise<HeadmarkTemplate> {
+export default async function loadTemplate(templatePath: string): Promise<BannerTemplate> {
   const filePath = resolve(templatePath);
   const extension = extname(filePath).toLowerCase();
 
@@ -27,5 +27,5 @@ export default async function loadTemplate(templatePath: string): Promise<Headma
     throw new TypeError(`Template "${filePath}" must export a function as its default export.`);
   }
 
-  return template as HeadmarkTemplate;
+  return template as BannerTemplate;
 }
