@@ -20,12 +20,12 @@ cli
   })
   .option("--dry-run", "Preview changes without writing files")
   .action(async (files: string[], options) => {
-    const [{ headmark }, { reportResult }] = await Promise.all([
-      import("./headmark.ts"),
+    const [{ headify }, { reportResult }] = await Promise.all([
+      import("./headify.ts"),
       import("./reporter.ts"),
     ]);
 
-    const result = await headmark(files, options);
+    const result = await headify(files, options);
 
     reportResult(pkg.version, result);
   });

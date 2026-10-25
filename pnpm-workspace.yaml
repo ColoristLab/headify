@@ -11,3 +11,4 @@ minimumReleaseAgeExclude:
   - "@vitest/ui@5.0.4"
   - "@vitest/utils@5.0.4"
   - vitest@5.0.4
+  - vitepress@2.0.0-alpha.21

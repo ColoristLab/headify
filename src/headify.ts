@@ -15,7 +15,7 @@ export const defaultOptions: Required<HeadifyOptions> = {
   dryRun: false,
 };
 
-export async function headmark(
+export async function headify(
   patterns: string[],
   options: HeadifyOptions = {},
 ): Promise<HeadifyResult> {
@@ -96,7 +96,7 @@ export async function headmark(
 }
 
 /**
- * 验证 headmark 参数。
+ * 验证 headify 参数。
  */
 function validateOptions(patterns: unknown, options: Required<HeadifyOptions>): void {
   if (!Array.isArray(patterns) || !patterns.every((pattern) => typeof pattern === "string")) {

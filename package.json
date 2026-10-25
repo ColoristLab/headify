@@ -45,6 +45,9 @@
     "tsdown": "tsdown",
     "build": "run-s clean tsdown size",
     "dev": "pnpm run tsdown --watch",
+    "docs:build": "vitepress build docs",
+    "docs:dev": "vitepress dev docs",
+    "docs:preview": "vitepress preview docs",
     "typecheck": "tsc --noEmit",
     "test": "vitest --coverage",
     "test:ui": "pnpm run test --ui",
@@ -77,6 +80,8 @@
     "ts-dedent": "^2.3.0",
     "tsdown": "^0.23.2",
     "typescript": "6.0.3",
+    "vitepress": "2.0.0-alpha.21",
+    "vitepress-plugin-group-icons": "^1.8.1",
     "vitest": "^5.0.5"
   },
   "simple-git-hooks": {

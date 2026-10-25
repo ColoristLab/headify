@@ -1,0 +1,36 @@
+[32m[1mWelcome to releaseasy![22m[39m
+
+[34m?[39m [1mWhich config format would you like?[22m
+[36m❯ JavaScript[39m
+  TypeScript
+  JSON
+  package.json
+
+[32m✔[39m [1mWhich config format would you like?[22m [36mJavaScript[39m
+
+[34m?[39m [1mWhich changelog format?[22m
+[36m❯ Default[39m
+  Keep a Changelog
+  GitHub
+  GitHub Keep a Changelog
+  GitLab
+  GitLab Keep a Changelog
+  Detailed
+  Minimal
+  Scoped
+  Scope Sorted
+  Cocogitto
+  Unconventional
+
+[32m✔[39m [1mWhich changelog format?[22m [36mDefault[39m
+
+[34m?[39m [1mAdd releaseasy npm scripts to package.json?[22m [2m(Y/n)[22m
+
+[32m✔[39m [1mAdd releaseasy npm scripts to package.json?[22m [36mYes[39m
+
+[32m✔[39m Created [33mreleaseasy.config.mjs[39m
+[32m✔[39m Created [33mcliff.toml[39m [90m(default)[39m
+
+  You're ready to release!
+  Run:
+    [36mpnpm run release[39m

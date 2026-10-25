@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": [".vitepress/**/*.ts", ".vitepress/**/*.d.ts", "**/*.ts"]
+}
