@@ -1,24 +1,24 @@
 {
-  "name": "headmark",
+  "name": "headify",
   "version": "0.0.0",
-  "description": "Add file header banners",
+  "description": "File header banner generator for Node.js.",
   "keywords": [
     "banner",
     "head",
     "header"
   ],
   "bugs": {
-    "url": "https://github.com/ColoristLab/headmark/issues"
+    "url": "https://github.com/ColoristLab/headify/issues"
   },
   "license": "MIT",
   "author": "ajiho",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ColoristLab/headmark.git"
+    "url": "git+https://github.com/ColoristLab/headify.git"
   },
   "funding": "https://www.lujiahao.com/sponsor",
   "bin": {
-    "headmark": "./dist/cli.mjs"
+    "headify": "./dist/cli.mjs"
   },
   "files": [
     "dist"
