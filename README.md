@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="./logo.svg" width="120" height="120" alt="wood">
+
 # headify
 
 Node.js 文件头部横幅生成工具。
