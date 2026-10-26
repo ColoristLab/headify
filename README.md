@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./logo.svg" width="120" height="120" alt="wood">
+<img src="./logo2.svg" width="150" alt="headify">
 
 # headify
 
