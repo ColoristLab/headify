@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./logo2.svg" width="150" alt="headify">
+<img src="./docs/public/logo-large.svg" width="150" alt="headify">
 
 # headify
 
