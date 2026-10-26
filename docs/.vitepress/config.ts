@@ -13,7 +13,7 @@ export default defineConfig({
   },
   ignoreDeadLinks: false,
   head: [
-    ["link", { rel: "icon", href: "/ColoristLab/favicon.svg", type: "image/svg+xml" }],
+    ["link", { rel: "icon", href: "/ColoristLab/logo.svg", type: "image/svg+xml" }],
     [
       "meta",
       {
@@ -48,7 +48,7 @@ export default defineConfig({
     // https://vitepress.dev/reference/default-theme-config
     nav: nav(),
 
-    logo: { src: "/logo-mini.svg", width: 24, height: 24 },
+    logo: { src: "/logo.svg", width: 24, height: 24 },
     sidebar: [
       {
         text: "Guide",
