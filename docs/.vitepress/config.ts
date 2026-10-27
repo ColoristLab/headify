@@ -6,7 +6,7 @@ import { markdown as enMarkdown } from "../en/config.ts";
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: "headify",
-  base: "/ColoristLab/",
+  base: "/coloristlab/",
   description: "让版本发布更简单的 CLI",
   rewrites: {
     "zh/:rest*": ":rest*",
