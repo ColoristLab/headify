@@ -2,10 +2,10 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { headmark } from "../src/headmark.js";
+import { headify } from "../src/headify.js";
 import { createProject } from "./helpers.js";
 
-describe("headmark", () => {
+describe("headify", () => {
   let project: Awaited<ReturnType<typeof createProject>> | undefined;
 
   afterEach(async () => {
@@ -14,10 +14,10 @@ describe("headmark", () => {
     project = undefined;
   });
 
-  it("returns an empty result and skips package.json loading when no files match", async () => {
+  it("没有匹配文件时返回空结果，并跳过 package.json 的加载", async () => {
     project = await createProject();
 
-    const result = await headmark(["missing/**/*.ts"], { cwd: project.cwd });
+    const result = await headify(["missing/**/*.ts"], { cwd: project.cwd });
 
     expect(result).toMatchObject({
       template: "",
@@ -30,12 +30,12 @@ describe("headmark", () => {
     });
   });
 
-  it("prepends a banner to matching files and returns summary counts", async () => {
+  it("为匹配的文件添加横幅并返回汇总计数", async () => {
     project = await createProject();
     await project.writeFile("src/index.ts", "export const value = 1;\n");
     await project.writeFile("src/other.ts", "export const other = 2;\n");
 
-    const result = await headmark(["src/**/*.ts"], {
+    const result = await headify(["src/**/*.ts"], {
       cwd: project.cwd,
       template: "",
     });
@@ -54,14 +54,14 @@ describe("headmark", () => {
     expect(await project.readFile("src/index.ts")).toMatch(/^\/\*!/);
   });
 
-  it("does not add a duplicate banner when run more than once", async () => {
+  it("重复运行时不会添加重复横幅", async () => {
     project = await createProject();
     await project.writeFile("src/index.ts", "export const value = 1;\n");
 
     const options = { cwd: project.cwd, template: "" };
-    const first = await headmark(["src/index.ts"], options);
+    const first = await headify(["src/index.ts"], options);
     const contentAfterFirstRun = await project.readFile("src/index.ts");
-    const second = await headmark(["src/index.ts"], options);
+    const second = await headify(["src/index.ts"], options);
 
     expect(first.updated).toBe(1);
     expect(second.updated).toBe(0);
@@ -69,12 +69,12 @@ describe("headmark", () => {
     expect(await project.readFile("src/index.ts")).toBe(contentAfterFirstRun);
   });
 
-  it("excludes files matching exclude patterns", async () => {
+  it("排除符合排除模式的文件", async () => {
     project = await createProject();
     await project.writeFile("src/index.ts", "index\n");
     await project.writeFile("dist/bundle.js", "bundle\n");
 
-    const result = await headmark(["**/*"], {
+    const result = await headify(["**/*"], {
       cwd: project.cwd,
       exclude: ["dist/**", "package.json"],
       template: "",
@@ -84,12 +84,12 @@ describe("headmark", () => {
     expect(await project.readFile("dist/bundle.js")).toBe("bundle\n");
   });
 
-  it("dry-run reports files that would change without writing", async () => {
+  it("试运行模式会报告需要修改的文件，但不会写入文件", async () => {
     project = await createProject();
     const original = "export const value = 1;\n";
     await project.writeFile("src/index.ts", original);
 
-    const result = await headmark(["src/index.ts"], {
+    const result = await headify(["src/index.ts"], {
       cwd: project.cwd,
       dryRun: true,
       template: "",
@@ -103,12 +103,12 @@ describe("headmark", () => {
     expect(await project.readFile("src/index.ts")).toBe(original);
   });
 
-  it("dry-run reports an existing banner as unchanged", async () => {
+  it("试运行模式会将已有横幅的文件报告为未更改", async () => {
     project = await createProject();
     await project.writeFile("src/index.ts", "/* custom */\nsource\n");
     await project.writeFile("template.mjs", "export default () => '/* custom */';");
 
-    const result = await headmark(["src/index.ts"], {
+    const result = await headify(["src/index.ts"], {
       cwd: project.cwd,
       template: join(project.cwd, "template.mjs"),
       dryRun: true,
@@ -118,7 +118,7 @@ describe("headmark", () => {
     expect(result.unchanged).toBe(1);
   });
 
-  // it("uses the custom template and provides file/package context", async () => {
+  // it("使用自定义模板并提供文件与包的上下文", async () => {
   //   project = await createProject();
   //   await project.writeFile("src/index.ts", "source\n");
   //   await project.writeFile(
@@ -126,7 +126,7 @@ describe("headmark", () => {
   //     "export default (ctx) => `// ${ctx.package.name}@${ctx.package.version} | ${ctx.file.path} | ${ctx.file.basename}${ctx.file.ext}`;",
   //   );
 
-  //   const result = await headmark(["src/index.ts"], {
+  //   const result = await headify(["src/index.ts"], {
   //     cwd: project.cwd,
   //     template: join(project.cwd, "banner.mjs"),
   //   });
@@ -136,27 +136,27 @@ describe("headmark", () => {
   //     .toMatch(/^\/\/ test-project@1\.2\.3 \| src\/index\.ts \| index\.ts\nsource\n$/);
   // });
 
-  it("validates patterns and option types", async () => {
+  it("验证匹配模式和选项类型", async () => {
     project = await createProject();
 
-    await expect(headmark("src/*.ts" as never, { cwd: project.cwd })).rejects.toThrow(
+    await expect(headify("src/*.ts" as never, { cwd: project.cwd })).rejects.toThrow(
       "Expected patterns to be an array of strings.",
     );
-    await expect(headmark([], { cwd: 123 as never })).rejects.toThrow(
+    await expect(headify([], { cwd: 123 as never })).rejects.toThrow(
       'Expected "cwd" to be a string.',
     );
-    await expect(headmark([], { cwd: project.cwd, template: 123 as never })).rejects.toThrow(
+    await expect(headify([], { cwd: project.cwd, template: 123 as never })).rejects.toThrow(
       'Expected "template" to be a string.',
     );
-    await expect(headmark([], { cwd: project.cwd, exclude: "dist/**" as never })).rejects.toThrow(
+    await expect(headify([], { cwd: project.cwd, exclude: "dist/**" as never })).rejects.toThrow(
       'Expected "exclude" to be an array of strings.',
     );
-    await expect(headmark([], { cwd: project.cwd, dryRun: "yes" as never })).rejects.toThrow(
+    await expect(headify([], { cwd: project.cwd, dryRun: "yes" as never })).rejects.toThrow(
       'Expected "dryRun" to be a boolean.',
     );
   });
 
-  it("rejects when package.json is missing for a non-empty match", async () => {
+  it("存在匹配文件但缺少 package.json 时拒绝执行", async () => {
     project = await createProject();
     await project.writeFile("src/index.ts", "source\n");
     // createProject creates package.json, so remove it through the filesystem helper's root.
@@ -164,6 +164,6 @@ describe("headmark", () => {
     const { join } = await import("node:path");
     await rm(join(project.cwd, "package.json"));
 
-    await expect(headmark(["src/index.ts"], { cwd: project.cwd })).rejects.toThrow();
+    await expect(headify(["src/index.ts"], { cwd: project.cwd })).rejects.toThrow();
   });
 });

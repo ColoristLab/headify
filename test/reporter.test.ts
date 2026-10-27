@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { logger } from "../src/logger.js";
 import { reportResult } from "../src/reporter.js";
 
@@ -7,7 +8,7 @@ describe("reportResult", () => {
     vi.restoreAllMocks();
   });
 
-  it("warns and returns when no files matched", () => {
+  it("没有匹配文件时发出警告并返回", () => {
     const warn = vi.spyOn(logger, "warn").mockImplementation(() => {});
     const info = vi.spyOn(logger, "info").mockImplementation(() => {});
     const success = vi.spyOn(logger, "success").mockImplementation(() => {});
@@ -28,7 +29,7 @@ describe("reportResult", () => {
     expect(success).not.toHaveBeenCalled();
   });
 
-  it("reports normal run totals and file statuses", () => {
+  it("报告正常运行的总数和文件状态", () => {
     const info = vi.spyOn(logger, "info").mockImplementation(() => {});
     const success = vi.spyOn(logger, "success").mockImplementation(() => {});
 
@@ -46,7 +47,7 @@ describe("reportResult", () => {
       ],
     });
 
-    expect(info).toHaveBeenCalledWith("headmark v1.2.3");
+    expect(info).toHaveBeenCalledWith("headify v1.2.3");
     expect(info).toHaveBeenCalledWith("Matched 2 files");
     expect(info).toHaveBeenCalledWith("Template: default");
     expect(info).toHaveBeenCalledWith("Updated: 1 Unchanged: 1");
@@ -55,7 +56,7 @@ describe("reportResult", () => {
     expect(success).toHaveBeenCalledWith(expect.stringContaining("Completed in"));
   });
 
-  it("reports dry-run mode and would-update totals", () => {
+  it("报告试运行模式及预计更新的文件数量", () => {
     const info = vi.spyOn(logger, "info").mockImplementation(() => {});
 
     reportResult("1.2.3", {

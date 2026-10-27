@@ -1,13 +1,15 @@
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { findFiles, hasBanner, prependBanner } from "../src/file.js";
 
 let cwd: string;
 
 async function setup() {
-  cwd = await mkdtemp(join(tmpdir(), "headmark-file-test-"));
+  cwd = await mkdtemp(join(tmpdir(), "headify-file-test-"));
   return cwd;
 }
 
@@ -16,7 +18,7 @@ afterEach(async () => {
 });
 
 describe("findFiles", () => {
-  it("finds matching regular files", async () => {
+  it("查找匹配的普通文件", async () => {
     const root = await setup();
     await mkdir(join(root, "src"), { recursive: true });
     await writeFile(join(root, "src", "a.ts"), "a");
@@ -26,13 +28,12 @@ describe("findFiles", () => {
     const files = await findFiles(["src/*.ts"], { cwd: root, exclude: [] });
 
     expect(files).toHaveLength(2);
-    expect(files).toEqual(expect.arrayContaining([
-      join(root, "src", "a.ts"),
-      join(root, "src", "b.ts"),
-    ]));
+    expect(files).toEqual(
+      expect.arrayContaining([join(root, "src", "a.ts"), join(root, "src", "b.ts")]),
+    );
   });
 
-  it("supports multiple glob patterns without duplicate results", async () => {
+  it("支持多个 glob 匹配模式，且不会产生重复结果", async () => {
     const root = await setup();
     await writeFile(join(root, "a.ts"), "a");
     await writeFile(join(root, "b.ts"), "b");
@@ -42,7 +43,7 @@ describe("findFiles", () => {
     expect(files).toHaveLength(2);
   });
 
-  it("honors exclude patterns", async () => {
+  it("遵循排除匹配模式", async () => {
     const root = await setup();
     await mkdir(join(root, "dist"), { recursive: true });
     await writeFile(join(root, "src.ts"), "src");
@@ -56,16 +57,15 @@ describe("findFiles", () => {
     expect(files).toEqual([join(root, "src.ts")]);
   });
 
-  it("returns an empty array when nothing matches", async () => {
+  it("没有匹配项时返回空数组", async () => {
     const root = await setup();
 
-    await expect(findFiles(["missing/**/*.ts"], { cwd: root, exclude: [] }))
-      .resolves.toEqual([]);
+    await expect(findFiles(["missing/**/*.ts"], { cwd: root, exclude: [] })).resolves.toEqual([]);
   });
 });
 
 describe("hasBanner", () => {
-  it("returns true when the banner is at the beginning of a file", async () => {
+  it("横幅位于文件开头时返回 true", async () => {
     const root = await setup();
     const file = join(root, "a.ts");
     await writeFile(file, "/* banner */\nconst value = 1;\n");
@@ -73,7 +73,7 @@ describe("hasBanner", () => {
     await expect(hasBanner(file, "/* banner */")).resolves.toBe(true);
   });
 
-  it("accepts CRLF after the banner", async () => {
+  it("支持横幅后使用 CRLF 换行符", async () => {
     const root = await setup();
     const file = join(root, "a.ts");
     await writeFile(file, "/* banner */\r\nconst value = 1;\r\n");
@@ -81,7 +81,7 @@ describe("hasBanner", () => {
     await expect(hasBanner(file, "/* banner */\n\n")).resolves.toBe(true);
   });
 
-  it("returns false when the banner appears later in the file", async () => {
+  it("横幅出现在文件后续位置时返回 false", async () => {
     const root = await setup();
     const file = join(root, "a.ts");
     await writeFile(file, "const value = 1;\n/* banner */");
@@ -89,7 +89,7 @@ describe("hasBanner", () => {
     await expect(hasBanner(file, "/* banner */")).resolves.toBe(false);
   });
 
-  it("does not treat a longer prefix as the same banner", async () => {
+  it("不会将更长的前缀误判为相同的横幅", async () => {
     const root = await setup();
     const file = join(root, "a.ts");
     await writeFile(file, "/* banner */ extra\ncontent");
@@ -99,7 +99,7 @@ describe("hasBanner", () => {
 });
 
 describe("prependBanner", () => {
-  it("prepends the banner and preserves the original content", async () => {
+  it("在文件开头添加横幅并保留原有内容", async () => {
     const root = await setup();
     const file = join(root, "a.ts");
     await writeFile(file, "const value = 1;\n");
@@ -108,7 +108,7 @@ describe("prependBanner", () => {
     await expect(readFile(file, "utf8")).resolves.toBe("/* banner */\nconst value = 1;\n");
   });
 
-  it("does not modify a file that already starts with the same banner", async () => {
+  it("文件开头已存在相同横幅时不做修改", async () => {
     const root = await setup();
     const file = join(root, "a.ts");
     const original = "/* banner */\nconst value = 1;\n";
@@ -118,7 +118,7 @@ describe("prependBanner", () => {
     await expect(readFile(file, "utf8")).resolves.toBe(original);
   });
 
-  it("writes only the banner when the original file is empty", async () => {
+  it("原文件为空时仅写入横幅", async () => {
     const root = await setup();
     const file = join(root, "empty.ts");
     await writeFile(file, "");
@@ -127,10 +127,9 @@ describe("prependBanner", () => {
     await expect(readFile(file, "utf8")).resolves.toBe("/* banner */");
   });
 
-  it("throws when the target file does not exist", async () => {
+  it("目标文件不存在时抛出异常", async () => {
     const root = await setup();
 
-    await expect(prependBanner(join(root, "missing.ts"), "/* banner */"))
-      .rejects.toThrow();
+    await expect(prependBanner(join(root, "missing.ts"), "/* banner */")).rejects.toThrow();
   });
 });

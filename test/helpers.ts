@@ -3,17 +3,21 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 
 export async function createProject() {
-  const cwd = await mkdtemp(join(tmpdir(), "headmark-test-"));
+  const cwd = await mkdtemp(join(tmpdir(), "headify-test-"));
 
   await writeFile(
     join(cwd, "package.json"),
-    JSON.stringify({
-      name: "test-project",
-      version: "1.2.3",
-      homepage: "https://example.com",
-      author: "Test Author",
-      license: "MIT",
-    }, null, 2),
+    JSON.stringify(
+      {
+        name: "test-project",
+        version: "1.2.3",
+        homepage: "https://example.com",
+        author: "Test Author",
+        license: "MIT",
+      },
+      null,
+      2,
+    ),
   );
 
   return {
