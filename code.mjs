@@ -1,7 +1,10 @@
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { resolve, relative, sep } from "node:path";
 
-const inputDir = resolve(process.argv[2] ?? "src");
+const inputDirs = (process.argv.length > 2 ? process.argv.slice(2) : ["src"]).map((dir) =>
+  resolve(dir),
+);
+
 const outputFile = resolve("code.txt");
 
 async function collectFiles(dir) {
@@ -22,10 +25,16 @@ async function collectFiles(dir) {
 }
 
 async function main() {
-  const files = await collectFiles(inputDir);
+  // 遍历所有输入目录，并去除重复文件
+  const files = [...new Set((await Promise.all(inputDirs.map((dir) => collectFiles(dir)))).flat())];
 
-  // 按文件相对路径排序，保证输出顺序稳定
-  files.sort((a, b) => relative(inputDir, a).localeCompare(relative(inputDir, b)));
+  // 按文件相对于当前工作目录的路径排序，保证输出顺序稳定
+  files.sort((a, b) =>
+    relative(process.cwd(), a)
+      .split(sep)
+      .join("/")
+      .localeCompare(relative(process.cwd(), b).split(sep).join("/")),
+  );
 
   const sections = await Promise.all(
     files.map(async (file) => {

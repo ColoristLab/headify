@@ -1,6 +1,823 @@
+src/cli.ts
+
+#!/usr/bin/env node
+
+import cac from "cac";
+
+import pkg from "../package.json" with { type: "json" };
+import { logger } from "./logger.ts";
+
+const cli = cac(pkg.name);
+
+cli.help().version(pkg.version);
+
+cli
+  .command("<...files>", "Prepend banner headers to files.", {
+    ignoreOptionDefaultValue: true,
+    allowUnknownOptions: true,
+  })
+  .option("-t, --template <path>", "Path to Eta template file")
+  .option("-e, --exclude <...patterns>", "Exclude files or directories (supports glob)", {
+    type: [],
+  })
+  .option("--dry-run", "Preview changes without writing files")
+  .action(async (files: string[], options) => {
+    const [{ headify }, { reportResult }] = await Promise.all([
+      import("./headify.ts"),
+      import("./reporter.ts"),
+    ]);
+
+    const result = await headify(files, options);
+
+    reportResult(pkg.version, result);
+  });
+
+/**
+ * 解析命令行参数并执行匹配的命令。
+ */
+export async function runCli(argv: string[] = process.argv): Promise<void> {
+  try {
+    cli.parse(argv, { run: false });
+
+    await cli.runMatchedCommand();
+  } catch (error: unknown) {
+    logger.error(error);
+    process.exitCode = 1;
+  }
+}
+
+void runCli();
+
+
+src/context.ts
+
+import { basename, extname, relative, resolve, sep } from "node:path";
+
+import type { PackageJson } from "pkg-types";
+
+import type { FileInfo, TemplateContext } from "./types.js";
+
+/**
+ * 构造当前文件的模板上下文。
+ */
+export function createContext(
+  packageMetadata: PackageJson,
+  filePath: string,
+  cwd: string,
+): TemplateContext {
+  const absolutePath = resolve(cwd, filePath);
+  const relativePath = relative(cwd, absolutePath);
+  const fileName = basename(absolutePath);
+  const extension = extname(fileName);
+
+  const file: FileInfo = {
+    path: relativePath.split(sep).join("/"),
+    name: fileName,
+    basename: fileName.slice(0, fileName.length - extension.length),
+    ext: extension,
+  };
+
+  return {
+    package: packageMetadata,
+    year: new Date().getFullYear(),
+    file,
+  };
+}
+
+
+src/file.ts
+
+import { readFile, stat, writeFile } from "node:fs/promises";
+import { glob } from "node:fs/promises";
+import { resolve } from "node:path";
+
+import type { HeadifyOptions } from "./types.js";
+
+type FindFilesOptions = Required<Pick<HeadifyOptions, "exclude" | "cwd">>;
+
+/**
+ * 查找目标文件，只返回普通文件。
+ */
+export async function findFiles(
+  patterns: string | string[],
+  options: FindFilesOptions,
+): Promise<string[]> {
+  const { cwd, exclude } = options;
+  const files = new Set<string>();
+
+  for await (const file of glob(patterns, {
+    cwd,
+    exclude,
+  })) {
+    const absolutePath = resolve(cwd, file);
+    const fileStat = await stat(absolutePath);
+
+    if (fileStat.isFile()) {
+      files.add(absolutePath);
+    }
+  }
+
+  return [...files];
+}
+
+/**
+ * 规范 banner 的尾部空白。
+ */
+function normalizeBanner(banner: string): string {
+  return banner.trimEnd();
+}
+
+/**
+ * 判断文件内容是否已经包含指定 banner。
+ */
+function hasBannerContent(content: string, banner: string): boolean {
+  const normalizedBanner = normalizeBanner(banner);
+
+  return (
+    content.startsWith(normalizedBanner) &&
+    (content.length === normalizedBanner.length ||
+      content.startsWith(`${normalizedBanner}\n`) ||
+      content.startsWith(`${normalizedBanner}\r\n`))
+  );
+}
+
+/**
+ * 检查文件是否已经包含当前 banner。
+ */
+export async function hasBanner(file: string, banner: string): Promise<boolean> {
+  const content = await readFile(file, "utf8");
+
+  return hasBannerContent(content, banner);
+}
+
+/**
+ * 在文件开头插入 banner。
+ *
+ * 返回 false 表示文件已经存在相同的 banner。
+ */
+export async function prependBanner(file: string, banner: string): Promise<boolean> {
+  const content = await readFile(file, "utf8");
+  const normalizedBanner = normalizeBanner(banner);
+
+  if (hasBannerContent(content, normalizedBanner)) {
+    return false;
+  }
+
+  const separator = content.length > 0 ? "\n" : "";
+
+  await writeFile(file, `${normalizedBanner}${separator}${content}`, "utf8");
+
+  return true;
+}
+
+
+src/headify.ts
+
+import { readFile } from "node:fs/promises";
+import { relative, resolve } from "node:path";
+
+import type { PackageJson } from "pkg-types";
+
+import { createContext } from "./context.js";
+import { findFiles, hasBanner, prependBanner } from "./file.js";
+import { renderBanner, resolveTemplate } from "./renderer.js";
+import type { FileStatus, FileResult, HeadifyOptions, HeadifyResult } from "./types.js";
+
+export const defaultOptions: Required<HeadifyOptions> = {
+  cwd: process.cwd(),
+  template: "",
+  exclude: [],
+  dryRun: false,
+};
+
+export async function headify(
+  patterns: string[],
+  options: HeadifyOptions = {},
+): Promise<HeadifyResult> {
+  const config = {
+    ...defaultOptions,
+    ...options,
+  };
+
+  validateOptions(patterns, config);
+
+  const { cwd, template, exclude, dryRun } = config;
+  const startedAt = Date.now();
+
+  const files = await findFiles(patterns, { cwd, exclude });
+
+  // 没有匹配文件时直接返回空结果，不读取 package.json。
+  if (files.length === 0) {
+    return {
+      template,
+      dryRun,
+      total: 0,
+      updated: 0,
+      unchanged: 0,
+      wouldUpdate: 0,
+      elapsed: Date.now() - startedAt,
+      files: [],
+    };
+  }
+
+  const packagePath = resolve(cwd, "package.json");
+  const packageMetadata = JSON.parse(await readFile(packagePath, "utf8")) as PackageJson;
+
+  // 整个任务只加载一次模板。
+  const templateMethod = await resolveTemplate(template);
+
+  const results: FileResult[] = [];
+
+  let updated = 0;
+  let unchanged = 0;
+  let wouldUpdate = 0;
+
+  for (const file of files) {
+    const context = createContext(packageMetadata, file, cwd);
+    const path = relative(cwd, file).replaceAll("\\", "/");
+    const banner = await renderBanner(templateMethod, context);
+
+    let status: FileStatus;
+
+    if (dryRun) {
+      if (await hasBanner(file, banner)) {
+        unchanged++;
+        status = "unchanged";
+      } else {
+        wouldUpdate++;
+        status = "wouldUpdate";
+      }
+    } else if (await prependBanner(file, banner)) {
+      updated++;
+      status = "updated";
+    } else {
+      unchanged++;
+      status = "unchanged";
+    }
+
+    results.push({ path, status });
+  }
+
+  return {
+    template,
+    dryRun,
+    total: results.length,
+    updated,
+    unchanged,
+    wouldUpdate,
+    elapsed: Date.now() - startedAt,
+    files: results,
+  };
+}
+
+/**
+ * 验证 headify 参数。
+ */
+function validateOptions(patterns: unknown, options: Required<HeadifyOptions>): void {
+  if (!Array.isArray(patterns) || !patterns.every((pattern) => typeof pattern === "string")) {
+    throw new TypeError("Expected patterns to be an array of strings.");
+  }
+
+  if (typeof options.cwd !== "string") {
+    throw new TypeError('Expected "cwd" to be a string.');
+  }
+
+  if (typeof options.template !== "string") {
+    throw new TypeError('Expected "template" to be a string.');
+  }
+
+  if (
+    !Array.isArray(options.exclude) ||
+    !options.exclude.every((pattern) => typeof pattern === "string")
+  ) {
+    throw new TypeError('Expected "exclude" to be an array of strings.');
+  }
+
+  if (typeof options.dryRun !== "boolean") {
+    throw new TypeError('Expected "dryRun" to be a boolean.');
+  }
+}
+
+
+src/index.ts
+
+export type * from "./types.js";
+export { headmark } from "./headmark.js";
+
+export { dedent } from "ts-dedent";
+
+
+src/load-template.ts
+
+import { createRequire } from "node:module";
+import { extname, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+
+import type { BannerTemplate } from "./types.ts";
+
+const require = createRequire(import.meta.url);
+
+const cjsExtensions = new Set([".cjs", ".cts"]);
+
+export default async function loadTemplate(templatePath: string): Promise<BannerTemplate> {
+  const filePath = resolve(templatePath);
+  const extension = extname(filePath).toLowerCase();
+
+  let template: unknown;
+
+  if (cjsExtensions.has(extension)) {
+    template = require(filePath);
+  } else if ([".js", ".mjs", ".ts", ".mts"].includes(extension)) {
+    const mod = await import(pathToFileURL(filePath).href);
+    template = mod.default;
+  } else {
+    throw new TypeError(`Unsupported template extension: ${extension}`);
+  }
+
+  if (typeof template !== "function") {
+    throw new TypeError(`Template "${filePath}" must export a function as its default export.`);
+  }
+
+  return template as BannerTemplate;
+}
+
+
+src/logger.ts
+
+import { styleText } from "node:util";
+
+type LogMethod = (...messages: unknown[]) => void;
+type LogColor = Parameters<typeof styleText>[0];
+type InspectColor = Exclude<LogColor, readonly unknown[]>;
+
+const colors = {
+  info: "cyan",
+  success: "green",
+  stack: "gray",
+  location: "cyan",
+} as const satisfies Record<string, InspectColor>;
+
+/**
+ * 格式化带背景色的标签。
+ */
+function formatLabel(label: string, background: InspectColor): string {
+  return styleText(["black", "bold", background], ` ${label} `);
+}
+
+/**
+ * 将未知类型的值转换为字符串。
+ */
+function stringify(value: unknown): string {
+  if (value instanceof Error) {
+    return value.message;
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  try {
+    return String(value);
+  } catch {
+    return "[Unprintable value]";
+  }
+}
+
+/**
+ * 移除文件 URL 的协议前缀。
+ *
+ * 例如：
+ * file:///C:/project/src/index.ts:10:20
+ * -> C:/project/src/index.ts:10:20
+ */
+function normalizeStackLocation(location: string): string {
+  return location.replace(/^file:\/\//, "");
+}
+
+/**
+ * 格式化错误堆栈行。
+ *
+ * - 只有 `at` 使用灰色。
+ * - 函数名和其他普通文本使用终端默认颜色。
+ * - 文件路径及行列号使用青色。
+ * - 移除 file:/// 前缀。
+ * - 原始缩进减少两个空格。
+ */
+function formatStackLine(line: string): string {
+  const trimmed = line.trimStart();
+  const originalIndent = line.slice(0, line.length - trimmed.length);
+
+  // 缩进
+  const indent = originalIndent.slice(0, Math.max(0, originalIndent.length - 0));
+
+  const frame = trimmed.match(/^(at)(\s+)(.*)$/);
+
+  if (!frame) {
+    return indent + styleText(colors.stack, trimmed);
+  }
+
+  const [, prefix, separator, content] = frame;
+
+  if (prefix === undefined || separator === undefined || content === undefined) {
+    return indent + styleText(colors.stack, trimmed);
+  }
+
+  // at functionName (file:///path/file.mjs:10:20)
+  const parenthesized = content.match(/^(.*?)\s+\((.+)\)$/);
+
+  if (parenthesized) {
+    const [, method, rawLocation] = parenthesized;
+
+    if (method !== undefined && rawLocation !== undefined) {
+      const location = normalizeStackLocation(rawLocation);
+
+      return (
+        indent +
+        styleText(colors.stack, prefix) +
+        separator +
+        method +
+        " (" +
+        styleText(colors.location, location) +
+        ")"
+      );
+    }
+  }
+
+  // at file:///path/file.mjs:10:20
+  // at async node:internal/modules/esm/loader:646:26
+  const plainLocation = content.match(/^(.*?)(:\d+(?::\d+)?)$/);
+
+  if (plainLocation) {
+    const [, rawFile, position] = plainLocation;
+
+    if (rawFile !== undefined && position !== undefined) {
+      const file = normalizeStackLocation(rawFile);
+
+      // async 等前缀保持默认颜色，仅路径和行列号使用青色。
+      const asyncPrefix = file.match(/^(async\s+)(.+)$/);
+
+      if (asyncPrefix) {
+        const [, asyncText, actualFile] = asyncPrefix;
+
+        if (asyncText !== undefined && actualFile !== undefined) {
+          return (
+            indent +
+            styleText(colors.stack, prefix) +
+            separator +
+            asyncText +
+            styleText(colors.location, actualFile + position)
+          );
+        }
+      }
+
+      return (
+        indent +
+        styleText(colors.stack, prefix) +
+        separator +
+        styleText(colors.location, file + position)
+      );
+    }
+  }
+
+  // 无法识别的堆栈格式：只将 at 设置为灰色。
+  return indent + styleText(colors.stack, prefix) + separator + content;
+}
+
+/**
+ * 格式化错误堆栈，支持递归处理 Error.cause。
+ */
+function formatError(error: Error, level = 0): string[] {
+  const lines: string[] = [];
+  const indent = "  ".repeat(level);
+
+  if (level > 0) {
+    lines.push(`${indent}${styleText("yellow", "Caused by:")} ${error.name}: ${error.message}`);
+  }
+
+  if (error.stack) {
+    const stackLines = error.stack.split("\n").slice(1);
+
+    for (const line of stackLines) {
+      lines.push(`${indent}${formatStackLine(line)}`);
+    }
+  }
+
+  if (error.cause instanceof Error) {
+    if (lines.length > 0) {
+      lines.push("");
+    }
+
+    lines.push(...formatError(error.cause, level + 1));
+  }
+
+  return lines;
+}
+
+/**
+ * 输出上下各带一行空行的日志。
+ */
+function writeSpaced(callback: () => void): void {
+  console.log();
+  callback();
+  console.log();
+}
+
+/**
+ * 创建普通日志方法。
+ */
+function write(label: string, color: InspectColor): LogMethod {
+  return (...messages) => {
+    console.log(`${styleText(color, label)} ${messages.map(stringify).join(" ")}`);
+  };
+}
+
+/**
+ * 创建带背景色标签的警告日志方法。
+ */
+function writeBadge(label: string, background: InspectColor): LogMethod {
+  return (...messages) => {
+    writeSpaced(() => {
+      console.warn(`${formatLabel(label, background)} ${messages.map(stringify).join(" ")}`);
+    });
+  };
+}
+
+/**
+ * 创建错误日志方法。
+ */
+function writeError(): LogMethod {
+  return (...messages) => {
+    writeSpaced(() => {
+      for (const message of messages) {
+        if (!(message instanceof Error)) {
+          console.error(`${formatLabel("ERROR", "bgRed")} ${stringify(message)}`);
+          continue;
+        }
+
+        // 输出错误提示。
+        console.error(`${formatLabel("ERROR", "bgRed")} ${message.message}`);
+
+        // 格式化错误堆栈。
+        const stack = formatError(message);
+
+        if (stack.length > 0) {
+          // 错误提示与堆栈之间保留一行空行。
+          console.error();
+          console.error(stack.join("\n"));
+        }
+      }
+    });
+  };
+}
+
+export const logger = {
+  log: (...messages: unknown[]) => console.log(...messages),
+
+  info: write("ℹ", colors.info),
+
+  success: write("✔", colors.success),
+
+  warn: writeBadge("WARN", "bgYellow"),
+
+  error: writeError(),
+};
+
+
+src/renderer.ts
+
+import loadTemplate from "./load-template.ts";
+import defaultTemplate from "./template.js";
+import type { TemplateContext, BannerTemplate } from "./types.js";
+
+/**
+ * 加载模板函数。
+ */
+export async function resolveTemplate(template?: string): Promise<BannerTemplate> {
+  return template ? loadTemplate(template) : defaultTemplate;
+}
+
+/**
+ * 渲染文件头部内容。
+ */
+export async function renderBanner(
+  template: BannerTemplate,
+  context: TemplateContext,
+): Promise<string> {
+  const output = await template(context);
+
+  if (typeof output !== "string") {
+    throw new TypeError("Failed to render banner template.");
+  }
+
+  return output;
+}
+
+
+src/reporter.ts
+
+import { styleText } from "node:util";
+
+import pkg from "../package.json" with { type: "json" };
+import { logger } from "./logger.js";
+import type { FileStatus, HeadifyResult } from "./types.js";
+
+const colors = {
+  muted: "gray",
+  info: "cyan",
+  success: "green",
+} as const;
+
+/**
+ * 输出单个文件的处理结果。
+ */
+function reportFile(path: string, status: FileStatus): void {
+  const separator = path.lastIndexOf("/");
+  const directory = separator === -1 ? "" : path.slice(0, separator + 1);
+  const filename = path.slice(separator + 1);
+
+  const suffix = {
+    updated: "",
+    unchanged: ` ${styleText(colors.muted, "(Unchanged)")}`,
+    wouldUpdate: ` ${styleText(colors.info, "(Would update)")}`,
+  }[status];
+
+  logger.info(`${styleText(colors.muted, directory)}${filename}${suffix}`);
+}
+
+/**
+ * 根据任务结果输出控制台报告。
+ */
+export function reportResult(cliVersion: string, result: HeadifyResult): void {
+  if (result.total === 0) {
+    logger.warn("No files matched the specified patterns.");
+    return;
+  }
+
+  logger.info(`${pkg.name} v${cliVersion}`);
+  logger.info(`Matched ${result.total} files`);
+  logger.info(`Template: ${result.template || "default"}`);
+
+  if (result.dryRun) {
+    logger.info("Dry run: no files will be modified");
+  }
+
+  for (const file of result.files) {
+    reportFile(file.path, file.status);
+  }
+
+  const summary = result.dryRun
+    ? `Would update: ${result.wouldUpdate} Unchanged: ${result.unchanged}`
+    : `Updated: ${result.updated} Unchanged: ${result.unchanged}`;
+
+  logger.info(summary);
+  logger.success(`Completed in ${styleText(colors.success, `${result.elapsed} ms`)}`);
+}
+
+
+src/template.ts
+
+import { dedent } from "ts-dedent";
+
+import type { TemplateContext } from "./types.ts";
+
+/**
+ * 默认 banner 模板。
+ */
+export default (ctx: TemplateContext) => {
+  const { package: pkg, year, startYear } = ctx;
+
+  const copyright = startYear ? `${startYear}-${year}` : String(year);
+
+  return dedent`
+    /*!
+     * ${pkg.name} v${pkg.version}
+     * ${pkg.homepage}
+     *
+     * Copyright (c) ${copyright} ${pkg.author}
+     * Licensed under the ${pkg.license} license
+     */
+  `;
+};
+
+
+src/types.ts
+
+import type { PackageJson } from "pkg-types";
+
+/**
+ * 当前处理文件的信息。
+ */
+export interface FileInfo {
+  /** 相对于工作目录的文件路径 */
+  path: string;
+
+  /** 文件名，包含扩展名 */
+  name: string;
+
+  /** 不包含扩展名的文件名 */
+  basename: string;
+
+  /** 文件扩展名，例如 .js、.css */
+  ext: string;
+}
+
+/**
+ * 自定义 banner 模板使用的上下文。
+ */
+export interface TemplateContext {
+  /** 项目元数据 */
+  package: PackageJson;
+
+  /** 当前年份 */
+  year: number;
+
+  /** 当前处理的文件 */
+  file: FileInfo;
+
+  /** 起始年份 */
+  startYear?: number;
+}
+
+/**
+ * headify 的运行配置。
+ */
+export interface HeadifyOptions {
+  /**
+   * 工作目录，默认为当前进程的工作目录。
+   */
+  cwd?: string;
+
+  /**
+   * 自定义 banner 模板文件路径，例如 banner.ts、banner.mjs。
+   */
+  template?: string;
+
+  /**
+   * 排除的文件或目录 Glob 模式。
+   */
+  exclude?: string[];
+
+  /**
+   * 仅预览，不写入文件。
+   */
+  dryRun?: boolean;
+}
+
+export type FileStatus = "updated" | "unchanged" | "wouldUpdate";
+
+/**
+ * 单个文件的处理结果。
+ */
+export interface FileResult {
+  /** 相对于工作目录的文件路径，统一使用 / */
+  path: string;
+
+  /** 文件处理状态 */
+  status: FileStatus;
+}
+
+/**
+ * 一次 headify 任务的执行结果。
+ */
+export interface HeadifyResult {
+  /** 使用的模板路径，空字符串表示默认模板 */
+  template: string;
+
+  /** 是否为预览模式 */
+  dryRun: boolean;
+
+  /** 匹配到的文件总数 */
+  total: number;
+
+  /** 实际更新的文件数 */
+  updated: number;
+
+  /** 已存在相同 banner、无需修改的文件数 */
+  unchanged: number;
+
+  /** 预览模式下预计更新的文件数 */
+  wouldUpdate: number;
+
+  /** 本次任务的总耗时，单位毫秒 */
+  elapsed: number;
+
+  /** 每个文件的处理结果 */
+  files: FileResult[];
+}
+
+/**
+ * 用户自定义 banner 模板函数。
+ *
+ * @param context - 当前模板的上下文信息。
+ * @returns 生成的文件横幅字符串，支持同步或异步返回。
+ */
+export type BannerTemplate = (context: TemplateContext) => string | Promise<string>;
+
+
 test/context.test.ts
 
 import { describe, expect, it } from "vitest";
+
 import { createContext } from "../src/context.js";
 
 describe("createContext", () => {
@@ -9,7 +826,7 @@ describe("createContext", () => {
     version: "1.0.0",
   };
 
-  it("builds package, year and file context", () => {
+  it("构建包含包信息、年份和文件信息的上下文", () => {
     const before = new Date().getFullYear();
     const context = createContext(packageMetadata, "src/index.ts", "/project");
 
@@ -23,13 +840,13 @@ describe("createContext", () => {
     });
   });
 
-  it("normalizes Windows separators in the relative path", () => {
+  it("规范化相对路径中的 Windows 路径分隔符", () => {
     const context = createContext(packageMetadata, "src/components/button.js", "/project");
 
     expect(context.file.path).toBe("src/components/button.js");
   });
 
-  it("supports files without extensions", () => {
+  it("支持没有扩展名的文件", () => {
     const context = createContext(packageMetadata, "LICENSE", "/project");
 
     expect(context.file).toEqual({
@@ -40,7 +857,7 @@ describe("createContext", () => {
     });
   });
 
-  it("supports dotfiles", () => {
+  it("支持以点开头的隐藏文件", () => {
     const context = createContext(packageMetadata, ".editorconfig", "/project");
 
     expect(context.file).toEqual({
@@ -51,7 +868,7 @@ describe("createContext", () => {
     });
   });
 
-  it("resolves absolute file paths and keeps paths relative to cwd", () => {
+  it("解析绝对文件路径，并使路径保持相对于当前工作目录", () => {
     const context = createContext(packageMetadata, "/project/lib/index.js", "/project");
 
     expect(context.file.path).toBe("lib/index.js");
@@ -65,13 +882,15 @@ test/file.test.ts
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { findFiles, hasBanner, prependBanner } from "../src/file.js";
 
 let cwd: string;
 
 async function setup() {
-  cwd = await mkdtemp(join(tmpdir(), "headmark-file-test-"));
+  cwd = await mkdtemp(join(tmpdir(), "headify-file-test-"));
   return cwd;
 }
 
@@ -80,7 +899,7 @@ afterEach(async () => {
 });
 
 describe("findFiles", () => {
-  it("finds matching regular files", async () => {
+  it("查找匹配的普通文件", async () => {
     const root = await setup();
     await mkdir(join(root, "src"), { recursive: true });
     await writeFile(join(root, "src", "a.ts"), "a");
@@ -90,13 +909,12 @@ describe("findFiles", () => {
     const files = await findFiles(["src/*.ts"], { cwd: root, exclude: [] });
 
     expect(files).toHaveLength(2);
-    expect(files).toEqual(expect.arrayContaining([
-      join(root, "src", "a.ts"),
-      join(root, "src", "b.ts"),
-    ]));
+    expect(files).toEqual(
+      expect.arrayContaining([join(root, "src", "a.ts"), join(root, "src", "b.ts")]),
+    );
   });
 
-  it("supports multiple glob patterns without duplicate results", async () => {
+  it("支持多个 glob 匹配模式，且不会产生重复结果", async () => {
     const root = await setup();
     await writeFile(join(root, "a.ts"), "a");
     await writeFile(join(root, "b.ts"), "b");
@@ -106,7 +924,7 @@ describe("findFiles", () => {
     expect(files).toHaveLength(2);
   });
 
-  it("honors exclude patterns", async () => {
+  it("遵循排除匹配模式", async () => {
     const root = await setup();
     await mkdir(join(root, "dist"), { recursive: true });
     await writeFile(join(root, "src.ts"), "src");
@@ -120,16 +938,15 @@ describe("findFiles", () => {
     expect(files).toEqual([join(root, "src.ts")]);
   });
 
-  it("returns an empty array when nothing matches", async () => {
+  it("没有匹配项时返回空数组", async () => {
     const root = await setup();
 
-    await expect(findFiles(["missing/**/*.ts"], { cwd: root, exclude: [] }))
-      .resolves.toEqual([]);
+    await expect(findFiles(["missing/**/*.ts"], { cwd: root, exclude: [] })).resolves.toEqual([]);
   });
 });
 
 describe("hasBanner", () => {
-  it("returns true when the banner is at the beginning of a file", async () => {
+  it("横幅位于文件开头时返回 true", async () => {
     const root = await setup();
     const file = join(root, "a.ts");
     await writeFile(file, "/* banner */\nconst value = 1;\n");
@@ -137,7 +954,7 @@ describe("hasBanner", () => {
     await expect(hasBanner(file, "/* banner */")).resolves.toBe(true);
   });
 
-  it("accepts CRLF after the banner", async () => {
+  it("支持横幅后使用 CRLF 换行符", async () => {
     const root = await setup();
     const file = join(root, "a.ts");
     await writeFile(file, "/* banner */\r\nconst value = 1;\r\n");
@@ -145,7 +962,7 @@ describe("hasBanner", () => {
     await expect(hasBanner(file, "/* banner */\n\n")).resolves.toBe(true);
   });
 
-  it("returns false when the banner appears later in the file", async () => {
+  it("横幅出现在文件后续位置时返回 false", async () => {
     const root = await setup();
     const file = join(root, "a.ts");
     await writeFile(file, "const value = 1;\n/* banner */");
@@ -153,7 +970,7 @@ describe("hasBanner", () => {
     await expect(hasBanner(file, "/* banner */")).resolves.toBe(false);
   });
 
-  it("does not treat a longer prefix as the same banner", async () => {
+  it("不会将更长的前缀误判为相同的横幅", async () => {
     const root = await setup();
     const file = join(root, "a.ts");
     await writeFile(file, "/* banner */ extra\ncontent");
@@ -163,7 +980,7 @@ describe("hasBanner", () => {
 });
 
 describe("prependBanner", () => {
-  it("prepends the banner and preserves the original content", async () => {
+  it("在文件开头添加横幅并保留原有内容", async () => {
     const root = await setup();
     const file = join(root, "a.ts");
     await writeFile(file, "const value = 1;\n");
@@ -172,7 +989,7 @@ describe("prependBanner", () => {
     await expect(readFile(file, "utf8")).resolves.toBe("/* banner */\nconst value = 1;\n");
   });
 
-  it("does not modify a file that already starts with the same banner", async () => {
+  it("文件开头已存在相同横幅时不做修改", async () => {
     const root = await setup();
     const file = join(root, "a.ts");
     const original = "/* banner */\nconst value = 1;\n";
@@ -182,7 +999,7 @@ describe("prependBanner", () => {
     await expect(readFile(file, "utf8")).resolves.toBe(original);
   });
 
-  it("writes only the banner when the original file is empty", async () => {
+  it("原文件为空时仅写入横幅", async () => {
     const root = await setup();
     const file = join(root, "empty.ts");
     await writeFile(file, "");
@@ -191,11 +1008,10 @@ describe("prependBanner", () => {
     await expect(readFile(file, "utf8")).resolves.toBe("/* banner */");
   });
 
-  it("throws when the target file does not exist", async () => {
+  it("目标文件不存在时抛出异常", async () => {
     const root = await setup();
 
-    await expect(prependBanner(join(root, "missing.ts"), "/* banner */"))
-      .rejects.toThrow();
+    await expect(prependBanner(join(root, "missing.ts"), "/* banner */")).rejects.toThrow();
   });
 });
 
@@ -218,7 +1034,7 @@ describe("headify", () => {
     project = undefined;
   });
 
-  it("returns an empty result and skips package.json loading when no files match", async () => {
+  it("没有匹配文件时返回空结果，并跳过 package.json 的加载", async () => {
     project = await createProject();
 
     const result = await headify(["missing/**/*.ts"], { cwd: project.cwd });
@@ -234,7 +1050,7 @@ describe("headify", () => {
     });
   });
 
-  it("prepends a banner to matching files and returns summary counts", async () => {
+  it("为匹配的文件添加横幅并返回汇总计数", async () => {
     project = await createProject();
     await project.writeFile("src/index.ts", "export const value = 1;\n");
     await project.writeFile("src/other.ts", "export const other = 2;\n");
@@ -258,7 +1074,7 @@ describe("headify", () => {
     expect(await project.readFile("src/index.ts")).toMatch(/^\/\*!/);
   });
 
-  it("does not add a duplicate banner when run more than once", async () => {
+  it("重复运行时不会添加重复横幅", async () => {
     project = await createProject();
     await project.writeFile("src/index.ts", "export const value = 1;\n");
 
@@ -273,7 +1089,7 @@ describe("headify", () => {
     expect(await project.readFile("src/index.ts")).toBe(contentAfterFirstRun);
   });
 
-  it("excludes files matching exclude patterns", async () => {
+  it("排除符合排除模式的文件", async () => {
     project = await createProject();
     await project.writeFile("src/index.ts", "index\n");
     await project.writeFile("dist/bundle.js", "bundle\n");
@@ -288,7 +1104,7 @@ describe("headify", () => {
     expect(await project.readFile("dist/bundle.js")).toBe("bundle\n");
   });
 
-  it("dry-run reports files that would change without writing", async () => {
+  it("试运行模式会报告需要修改的文件，但不会写入文件", async () => {
     project = await createProject();
     const original = "export const value = 1;\n";
     await project.writeFile("src/index.ts", original);
@@ -307,7 +1123,7 @@ describe("headify", () => {
     expect(await project.readFile("src/index.ts")).toBe(original);
   });
 
-  it("dry-run reports an existing banner as unchanged", async () => {
+  it("试运行模式会将已有横幅的文件报告为未更改", async () => {
     project = await createProject();
     await project.writeFile("src/index.ts", "/* custom */\nsource\n");
     await project.writeFile("template.mjs", "export default () => '/* custom */';");
@@ -322,7 +1138,7 @@ describe("headify", () => {
     expect(result.unchanged).toBe(1);
   });
 
-  // it("uses the custom template and provides file/package context", async () => {
+  // it("使用自定义模板并提供文件与包的上下文", async () => {
   //   project = await createProject();
   //   await project.writeFile("src/index.ts", "source\n");
   //   await project.writeFile(
@@ -340,7 +1156,7 @@ describe("headify", () => {
   //     .toMatch(/^\/\/ test-project@1\.2\.3 \| src\/index\.ts \| index\.ts\nsource\n$/);
   // });
 
-  it("validates patterns and option types", async () => {
+  it("验证匹配模式和选项类型", async () => {
     project = await createProject();
 
     await expect(headify("src/*.ts" as never, { cwd: project.cwd })).rejects.toThrow(
@@ -360,7 +1176,7 @@ describe("headify", () => {
     );
   });
 
-  it("rejects when package.json is missing for a non-empty match", async () => {
+  it("存在匹配文件但缺少 package.json 时拒绝执行", async () => {
     project = await createProject();
     await project.writeFile("src/index.ts", "source\n");
     // createProject creates package.json, so remove it through the filesystem helper's root.
@@ -380,17 +1196,21 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 
 export async function createProject() {
-  const cwd = await mkdtemp(join(tmpdir(), "headmark-test-"));
+  const cwd = await mkdtemp(join(tmpdir(), "headify-test-"));
 
   await writeFile(
     join(cwd, "package.json"),
-    JSON.stringify({
-      name: "test-project",
-      version: "1.2.3",
-      homepage: "https://example.com",
-      author: "Test Author",
-      license: "MIT",
-    }, null, 2),
+    JSON.stringify(
+      {
+        name: "test-project",
+        version: "1.2.3",
+        homepage: "https://example.com",
+        author: "Test Author",
+        license: "MIT",
+      },
+      null,
+      2,
+    ),
   );
 
   return {
@@ -416,9 +1236,11 @@ test/renderer.test.ts
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderBanner, resolveTemplate } from "../src/renderer.js";
+
 import loadTemplate from "../src/load-template.js";
+import { renderBanner, resolveTemplate } from "../src/renderer.js";
 
 let cwd: string;
 
@@ -428,42 +1250,48 @@ afterEach(async () => {
 });
 
 describe("resolveTemplate", () => {
-  it("returns the default template when no path is supplied", async () => {
+  it("未提供路径时返回默认模板", async () => {
     const template = await resolveTemplate();
 
     expect(template).toBeTypeOf("function");
   });
 
-  it("loads an ESM JavaScript template", async () => {
-    cwd = await mkdtemp(join(tmpdir(), "headmark-template-"));
+  it("加载 ESM JavaScript 模板", async () => {
+    cwd = await mkdtemp(join(tmpdir(), "headify-template-"));
     const path = join(cwd, "template.mjs");
     await writeFile(path, "export default (ctx) => `// ${ctx.file.name}`;", "utf8");
 
     const template = await resolveTemplate(path);
 
-    await expect(Promise.resolve(template({
-      package: { name: "demo" },
-      year: 2026,
-      file: { path: "src/a.ts", name: "a.ts", basename: "a", ext: ".ts" },
-    }))).resolves.toBe("// a.ts");
+    await expect(
+      Promise.resolve(
+        template({
+          package: { name: "demo" },
+          year: 2026,
+          file: { path: "src/a.ts", name: "a.ts", basename: "a", ext: ".ts" },
+        }),
+      ),
+    ).resolves.toBe("// a.ts");
   });
 
-  it("loads a CommonJS template", async () => {
-    cwd = await mkdtemp(join(tmpdir(), "headmark-template-"));
+  it("加载 CommonJS 模板", async () => {
+    cwd = await mkdtemp(join(tmpdir(), "headify-template-"));
     const path = join(cwd, "template.cjs");
     await writeFile(path, "module.exports = (ctx) => '// ' + ctx.file.name;", "utf8");
 
     const template = await loadTemplate(path);
 
-    expect(await template({
-      package: { name: "demo" },
-      year: 2026,
-      file: { path: "a.js", name: "a.js", basename: "a", ext: ".js" },
-    })).toBe("// a.js");
+    expect(
+      await template({
+        package: { name: "demo" },
+        year: 2026,
+        file: { path: "a.js", name: "a.js", basename: "a", ext: ".js" },
+      }),
+    ).toBe("// a.js");
   });
 
-  it("rejects unsupported template extensions", async () => {
-    cwd = await mkdtemp(join(tmpdir(), "headmark-template-"));
+  it("拒绝不受支持的模板扩展名", async () => {
+    cwd = await mkdtemp(join(tmpdir(), "headify-template-"));
     const path = join(cwd, "template.json");
     await writeFile(path, "{}", "utf8");
 
@@ -471,7 +1299,7 @@ describe("resolveTemplate", () => {
   });
 
   it("rejects templates that do not export a function", async () => {
-    cwd = await mkdtemp(join(tmpdir(), "headmark-template-"));
+    cwd = await mkdtemp(join(tmpdir(), "headify-template-"));
     const path = join(cwd, "template.mjs");
     await writeFile(path, "export default 'not a function';", "utf8");
 
@@ -486,18 +1314,20 @@ describe("renderBanner", () => {
     file: { path: "src/a.ts", name: "a.ts", basename: "a", ext: ".ts" },
   };
 
-  it("returns a synchronous template result", async () => {
+  it("拒绝未导出函数的模板", async () => {
     await expect(renderBanner(() => "/* banner */", context)).resolves.toBe("/* banner */");
   });
 
-  it("supports asynchronous template functions", async () => {
-    await expect(renderBanner(async () => "/* async banner */", context))
-      .resolves.toBe("/* async banner */");
+  it("支持异步模板函数", async () => {
+    await expect(renderBanner(async () => "/* async banner */", context)).resolves.toBe(
+      "/* async banner */",
+    );
   });
 
-  it("throws if the template result is not a string", async () => {
-    await expect(renderBanner(() => 123 as never, context))
-      .rejects.toThrow("Failed to render banner template.");
+  it("模板执行结果不是字符串时抛出异常", async () => {
+    await expect(renderBanner(() => 123 as never, context)).rejects.toThrow(
+      "Failed to render banner template.",
+    );
   });
 });
 
@@ -514,7 +1344,7 @@ describe("reportResult", () => {
     vi.restoreAllMocks();
   });
 
-  it("warns and returns when no files matched", () => {
+  it("没有匹配文件时发出警告并返回", () => {
     const warn = vi.spyOn(logger, "warn").mockImplementation(() => {});
     const info = vi.spyOn(logger, "info").mockImplementation(() => {});
     const success = vi.spyOn(logger, "success").mockImplementation(() => {});
@@ -535,7 +1365,7 @@ describe("reportResult", () => {
     expect(success).not.toHaveBeenCalled();
   });
 
-  it("reports normal run totals and file statuses", () => {
+  it("报告正常运行的总数和文件状态", () => {
     const info = vi.spyOn(logger, "info").mockImplementation(() => {});
     const success = vi.spyOn(logger, "success").mockImplementation(() => {});
 
@@ -562,7 +1392,7 @@ describe("reportResult", () => {
     expect(success).toHaveBeenCalledWith(expect.stringContaining("Completed in"));
   });
 
-  it("reports dry-run mode and would-update totals", () => {
+  it("报告试运行模式及预计更新的文件数量", () => {
     const info = vi.spyOn(logger, "info").mockImplementation(() => {});
 
     reportResult("1.2.3", {

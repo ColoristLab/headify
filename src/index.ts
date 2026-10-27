@@ -1,4 +1,4 @@
 export type * from "./types.js";
-export { headmark } from "./headmark.js";
+export { headify } from "./headify.js";
 
 export { dedent } from "ts-dedent";

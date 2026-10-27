@@ -118,24 +118,6 @@ describe("headify", () => {
     expect(result.unchanged).toBe(1);
   });
 
-  // it("使用自定义模板并提供文件与包的上下文", async () => {
-  //   project = await createProject();
-  //   await project.writeFile("src/index.ts", "source\n");
-  //   await project.writeFile(
-  //     "banner.mjs",
-  //     "export default (ctx) => `// ${ctx.package.name}@${ctx.package.version} | ${ctx.file.path} | ${ctx.file.basename}${ctx.file.ext}`;",
-  //   );
-
-  //   const result = await headify(["src/index.ts"], {
-  //     cwd: project.cwd,
-  //     template: join(project.cwd, "banner.mjs"),
-  //   });
-
-  //   expect(result.template).toBe("banner.mjs");
-  //   expect(await project.readFile("src/index.ts"))
-  //     .toMatch(/^\/\/ test-project@1\.2\.3 \| src\/index\.ts \| index\.ts\nsource\n$/);
-  // });
-
   it("验证匹配模式和选项类型", async () => {
     project = await createProject();
 
@@ -159,9 +141,9 @@ describe("headify", () => {
   it("存在匹配文件但缺少 package.json 时拒绝执行", async () => {
     project = await createProject();
     await project.writeFile("src/index.ts", "source\n");
-    // createProject creates package.json, so remove it through the filesystem helper's root.
+    // createProject 会创建 package.json，因此需要通过文件系统辅助工具的根目录将其删除。
     const { rm } = await import("node:fs/promises");
-    const { join } = await import("node:path");
+
     await rm(join(project.cwd, "package.json"));
 
     await expect(headify(["src/index.ts"], { cwd: project.cwd })).rejects.toThrow();
