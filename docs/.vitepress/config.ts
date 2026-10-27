@@ -6,14 +6,14 @@ import { markdown as enMarkdown } from "../en/config.ts";
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: "headify",
-  base: "/coloristlab/",
+  base: "/headify/",
   description: "让版本发布更简单的 CLI",
   rewrites: {
     "zh/:rest*": ":rest*",
   },
   ignoreDeadLinks: false,
   head: [
-    ["link", { rel: "icon", href: "/ColoristLab/logo.svg", type: "image/svg+xml" }],
+    ["link", { rel: "icon", href: "/headify/logo.svg", type: "image/svg+xml" }],
     [
       "meta",
       {
