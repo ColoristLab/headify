@@ -52,13 +52,10 @@ export default defineConfig({
 
     logo: { src: "/logo.svg", width: 24, height: 24 },
     sidebar: [
-      {
-        text: "Guide",
-        items: [
-          { text: "Introduction", link: "/index" },
-          { text: "Getting Started", link: "/getting-started" },
-        ],
-      },
+      { text: "介绍", link: "/index" },
+      { text: "快速开始", link: "/getting-started" },
+      { text: "自定义模板", link: "/templates" },
+      { text: "命令行", link: "/cli" },
     ],
     socialLinks: [
       {
