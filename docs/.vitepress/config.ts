@@ -7,7 +7,7 @@ const base = "/headify/";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: "headify",
+  title: "Headify",
   base,
   description: "让版本发布更简单的 CLI",
   rewrites: {

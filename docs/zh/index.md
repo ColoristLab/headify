@@ -1,8 +1,3 @@
----
-layout: doc
-title: 什么是 headify？
----
-
 ![npm](https://img.shields.io/npm/dm/headify)
 
 > 轻量级文件头部注释生成工具。

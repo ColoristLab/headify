@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="./docs/public/logo.svg" width="120" height="120" alt="headify">
+<img src="./docs/public/logo.svg" width="120" height="120" alt="Headify">
 
-# headify
+# Headify
 
 Node.js 文件头部横幅生成工具。
 

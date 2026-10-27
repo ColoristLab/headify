@@ -14,7 +14,7 @@ cli
     ignoreOptionDefaultValue: true,
     allowUnknownOptions: true,
   })
-  .option("-t, --template <path>", "Path to Eta template file")
+  .option("-t, --template <path>", "Path to banner template file")
   .option("-e, --exclude <...patterns>", "Exclude files or directories (supports glob)", {
     type: [],
   })
