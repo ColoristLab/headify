@@ -3,17 +3,19 @@ import { groupIconMdPlugin, groupIconVitePlugin } from "vitepress-plugin-group-i
 
 import { markdown as enMarkdown } from "../en/config.ts";
 
+const base = "/headify/";
+
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: "headify",
-  base: "/headify/",
+  base,
   description: "让版本发布更简单的 CLI",
   rewrites: {
     "zh/:rest*": ":rest*",
   },
   ignoreDeadLinks: false,
   head: [
-    ["link", { rel: "icon", href: "/headify/logo.svg", type: "image/svg+xml" }],
+    ["link", { rel: "icon", href: `${base}logo.svg`, type: "image/svg+xml", sizes: "any" }],
     [
       "meta",
       {
