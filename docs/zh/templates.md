@@ -20,20 +20,6 @@ Headify 支持`.js`、 `.ts`、`.mjs`、`.mts`、`.cjs`、`.cts`为拓展名的�
 ::: code-group
 
 ```js [banner.mjs]
-/**
- * @param {import("headify").TemplateContext} context
- * @returns {string}
- */
-export default ({ package: pkg, year }) => {
-  return `/*!
-  * ${pkg.name} v${pkg.version} (${pkg.homepage})
-  * Copyright 2015-${year} ${pkg.author}
-  * Licensed under the ${pkg.license} license
-  */`;
-};
-```
-
-```js [banner.mjs(JSDoc 类型标注方式2)]
 /** @type {import("headify").BannerTemplate} */
 export default ({ package: pkg, year }) => {
   return `/*!
@@ -48,6 +34,17 @@ export default ({ package: pkg, year }) => {
 import { type TemplateContext } from "headify";
 
 export default ({ package: pkg, year }: TemplateContext) => {
+  return `/*!
+  * ${pkg.name} v${pkg.version} (${pkg.homepage})
+  * Copyright 2015-${year} ${pkg.author}
+  * Licensed under the ${pkg.license} license
+  */`;
+};
+```
+
+```js [banner.cjs]
+/** @type {import("headify").BannerTemplate} */
+module.exports = ({ package: pkg, year }) => {
   return `/*!
   * ${pkg.name} v${pkg.version} (${pkg.homepage})
   * Copyright 2015-${year} ${pkg.author}
@@ -74,7 +71,7 @@ module.exports = ({ package: pkg, year }: TemplateContext) => {
 
 ### 使用助手函数
 
-Headify 提供了一个助手函数，让返回自定义Banner的时候更容易：
+Headify 提供了一个助手函数`dedent`，该函数的作用是移除多行字符串每行共有的前导缩进，使模板字符串保持代码缩进的同时，输出整洁、格式统一的文本。让返回自定义 Banner 的时候更容易：
 
 ```js
 import { dedent } from "headify";
@@ -114,12 +111,30 @@ export default ({ package: pkg, year, file }) => {
   return dedent`
     /*!
      * ${name}${suffix ? ` ${suffix}` : ""} v${pkg.version} (${pkg.homepage})
-     * Copyright 2019-${year} ${pkg.author}
+     * Copyright 2011-${year} ${pkg.author}
      * Licensed under ${pkg.license} (${licenseUrl})
      */
   `;
 };
 ```
+
+执行命令：
+
+```bash
+headify "dist/**/*.{js,css}" -t ./banner.mjs
+```
+
+例如，处理 `bootstrap-grid.css` 时，生成的 Banner 为：
+
+```text
+/*!
+  * Bootstrap Grid v6.0.0-alpha.1 (https://getbootstrap.com/)
+  * Copyright 2011-2026 The Bootstrap Authors
+  * Licensed under MIT (https://github.com/twbs/bootstrap/blob/main/LICENSE)
+  */
+```
+
+处理 `bootstrap-grid.css` 时，名称则会自动变成 `Bootstrap Grid`，对于 `bootstrap.css` 等没有匹配特殊前缀的文件，则只使用 `Bootstrap`。
 
 ## 模板上下文
 

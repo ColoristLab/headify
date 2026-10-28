@@ -2,8 +2,12 @@ import { mkdtemp, readFile, rm, writeFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 
+export async function createTempDir(prefix: string) {
+  return await mkdtemp(join(tmpdir(), prefix));
+}
+
 export async function createProject() {
-  const cwd = await mkdtemp(join(tmpdir(), "headify-test-"));
+  const cwd = await createTempDir("headify-test-");
 
   await writeFile(
     join(cwd, "package.json"),

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createContext } from "../src/context.js";
+import { createContext } from "../src/context.ts";
 
 describe("createContext", () => {
   const packageMetadata = {

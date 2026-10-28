@@ -22,7 +22,20 @@ bun add -D headify
 
 :::
 
-安装完成后，在项目根目录执行 `headify <...files>` 命令，即可为指定文件添加版权声明。
+要验证 `headify` 是否正确安装，请在项目目录中运行以下命令：
+
+```bash
+./node_modules/.bin/headify --version
+```
+
+您还可以通过以下命令查看可用的 CLI 选项和示例：
+
+```bash
+./node_modules/.bin/headify --help
+```
+
+> [!TIP]
+> 关于 CLI 使用的更多帮助信息可以参考[命令行](./cli)页面。
 
 ## 基本用法
 
@@ -50,7 +63,7 @@ headify "dist/**/*.{css,js}"
 ```
 
 > [!WARNING]
-> 最后一种写法使用 **Brace Expansion（花括号展开）**，可以在一个 Glob 模式中匹配多种文件扩展名。建议使用引号包裹 Glob 模式，避免 Shell 提前展开或解释其中的特殊字符。
+> 最后一种写法使用 **Brace Expansion（花括号展开）**，可以在一个 Glob 模式中匹配多种文件扩展名。必须使用引号包裹 Glob 模式，避免 Shell 提前展开或解释其中的特殊字符。
 
 ### 排除文件
 

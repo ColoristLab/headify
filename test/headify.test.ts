@@ -2,8 +2,8 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { headify } from "../src/headify.js";
-import { createProject } from "./helpers.js";
+import { headify } from "../src/headify.ts";
+import { createProject } from "./helpers.ts";
 
 describe("headify", () => {
   let project: Awaited<ReturnType<typeof createProject>> | undefined;

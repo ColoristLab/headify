@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { logger } from "../src/logger.js";
-import { reportResult } from "../src/reporter.js";
+import { logger } from "../src/logger.ts";
+import { reportResult } from "../src/reporter.ts";
 
 describe("reportResult", () => {
   afterEach(() => {

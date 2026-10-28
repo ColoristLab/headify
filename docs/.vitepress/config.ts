@@ -4,12 +4,14 @@ import { groupIconMdPlugin, groupIconVitePlugin } from "vitepress-plugin-group-i
 import { markdown as enMarkdown } from "../en/config.ts";
 
 const base = "/headify/";
+const description = "Node.js 文件头部横幅生成工具";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: "Headify",
+  titleTemplate: `:title - ${description}`,
   base,
-  description: "让版本发布更简单的 CLI",
+  description,
   rewrites: {
     "zh/:rest*": ":rest*",
   },
@@ -51,12 +53,7 @@ export default defineConfig({
     nav: nav(),
 
     logo: { src: "/logo.svg", width: 24, height: 24 },
-    sidebar: [
-      { text: "介绍", link: "/index" },
-      { text: "快速开始", link: "/getting-started" },
-      { text: "自定义模板", link: "/templates" },
-      { text: "命令行", link: "/cli" },
-    ],
+    sidebar: sidebar(),
     socialLinks: [
       {
         icon: "github",
@@ -141,4 +138,18 @@ export default defineConfig({
 
 function nav(): DefaultTheme.NavItem[] {
   return [{ text: "Sponsor", link: "https://www.lujiahao.com/sponsor" }];
+}
+
+function sidebar(): DefaultTheme.SidebarItem[] {
+  return [
+    {
+      base: "/",
+      items: [
+        { text: "介绍", link: "/index" },
+        { text: "快速开始", link: "/getting-started" },
+        { text: "自定义模板", link: "/templates" },
+        { text: "命令行", link: "/cli" },
+      ],
+    },
+  ];
 }

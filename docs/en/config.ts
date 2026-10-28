@@ -17,24 +17,20 @@ export const markdown: MarkdownLocaleOptions = {
   },
 };
 
+const description = "File header banner generator for Node.js.";
+
 export default defineAdditionalConfig({
-  description: "Simplify Your Releases",
+  description,
+
+  titleTemplate: `:title - ${description}`,
 
   themeConfig: {
     nav: nav(),
 
-    sidebar: [
-      {
-        text: "Guide",
-        items: [
-          { text: "Introduction", link: "/index" },
-          { text: "Getting Started", link: "/getting-started" },
-        ],
-      },
-    ],
+    sidebar: sidebar(),
 
     editLink: {
-      pattern: "https://github.com/releaseasy/releaseasy/edit/main/docs/:path",
+      pattern: "https://github.com/ColoristLab/headify/edit/main/docs/:path",
       text: "Edit this page on GitHub",
     },
     footer: {
@@ -77,4 +73,18 @@ export default defineAdditionalConfig({
 
 function nav(): DefaultTheme.NavItem[] {
   return [{ text: "Sponsor", link: "https://www.lujiahao.com/sponsor" }];
+}
+
+function sidebar(): DefaultTheme.SidebarItem[] {
+  return [
+    {
+      base: "/en",
+      items: [
+        { text: "Introduction", link: "/index" },
+        { text: "Getting Started", link: "/getting-started" },
+        { text: "Custom Templates", link: "/templates" },
+        { text: "Command Line", link: "/cli" },
+      ],
+    },
+  ];
 }

@@ -2,12 +2,16 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import loadTemplate from "../src/load-template.js";
-import { renderBanner, resolveTemplate } from "../src/renderer.js";
+import loadTemplate from "../src/load-template.ts";
+import { renderBanner, resolveTemplate } from "../src/renderer.ts";
 
 let cwd: string;
+
+beforeEach(async () => {
+  cwd = await mkdtemp(join(tmpdir(), "headify-template-"));
+});
 
 afterEach(async () => {
   vi.restoreAllMocks();
@@ -22,7 +26,6 @@ describe("resolveTemplate", () => {
   });
 
   it("加载 ESM JavaScript 模板", async () => {
-    cwd = await mkdtemp(join(tmpdir(), "headify-template-"));
     const path = join(cwd, "template.mjs");
     await writeFile(path, "export default (ctx) => `// ${ctx.file.name}`;", "utf8");
 
@@ -40,7 +43,6 @@ describe("resolveTemplate", () => {
   });
 
   it("加载 CommonJS 模板", async () => {
-    cwd = await mkdtemp(join(tmpdir(), "headify-template-"));
     const path = join(cwd, "template.cjs");
     await writeFile(path, "module.exports = (ctx) => '// ' + ctx.file.name;", "utf8");
 
@@ -56,7 +58,6 @@ describe("resolveTemplate", () => {
   });
 
   it("拒绝不受支持的模板扩展名", async () => {
-    cwd = await mkdtemp(join(tmpdir(), "headify-template-"));
     const path = join(cwd, "template.json");
     await writeFile(path, "{}", "utf8");
 
@@ -64,7 +65,6 @@ describe("resolveTemplate", () => {
   });
 
   it("rejects templates that do not export a function", async () => {
-    cwd = await mkdtemp(join(tmpdir(), "headify-template-"));
     const path = join(cwd, "template.mjs");
     await writeFile(path, "export default 'not a function';", "utf8");
 

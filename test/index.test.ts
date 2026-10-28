@@ -1,8 +1,8 @@
 import { dedent } from "ts-dedent";
 import { describe, expect, it } from "vitest";
 
-import { headify } from "../src/headify.js";
-import * as publicApi from "../src/index.js";
+import { headify } from "../src/headify.ts";
+import * as publicApi from "../src/index.ts";
 
 describe("公共入口", () => {
   it("导出 headify 和 dedent", () => {
