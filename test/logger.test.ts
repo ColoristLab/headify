@@ -114,4 +114,30 @@ describe("logger", () => {
     expect(errorSpy.mock.calls[1]?.[0]).toContain("99");
     expect(errorSpy.mock.calls[2]?.[0]).toContain("[Unprintable value]");
   });
+
+  it("stringify 会直接返回 Error 的 message", () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    logger.info(new Error("error message"));
+
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("error message"));
+  });
+
+  it("cause 没有堆栈行时不插入多余的空行", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const cause = new Error("root cause");
+    delete cause.stack;
+
+    const error = new Error("outer error", { cause });
+    error.stack = "Error: outer error";
+
+    logger.error(error);
+
+    const output = errorSpy.mock.calls.map((call) => call[0]);
+
+    expect(output).toContainEqual(expect.stringContaining("outer error"));
+    expect(output).toContainEqual(expect.stringContaining("Caused by: Error: root cause"));
+    expect(output).not.toContain("");
+  });
 });

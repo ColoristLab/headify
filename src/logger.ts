@@ -61,8 +61,8 @@ function formatStackLine(line: string): string {
   const trimmed = line.trimStart();
   const originalIndent = line.slice(0, line.length - trimmed.length);
 
-  // 缩进
-  const indent = originalIndent.slice(0, Math.max(0, originalIndent.length - 0));
+  // 将原始缩进减少两个空格，最少保留零个空格。
+  const indent = originalIndent.slice(0, Math.max(0, originalIndent.length - 2));
 
   const frame = trimmed.match(/^(at)(\s+)(.*)$/);
 
@@ -70,31 +70,28 @@ function formatStackLine(line: string): string {
     return indent + styleText(colors.stack, trimmed);
   }
 
-  const [, prefix, separator, content] = frame;
-
-  if (prefix === undefined || separator === undefined || content === undefined) {
-    return indent + styleText(colors.stack, trimmed);
-  }
+  const prefix = frame[1]!;
+  const separator = frame[2]!;
+  const content = frame[3]!;
 
   // at functionName (file:///path/file.mjs:10:20)
   const parenthesized = content.match(/^(.*?)\s+\((.+)\)$/);
 
   if (parenthesized) {
-    const [, method, rawLocation] = parenthesized;
+    const method = parenthesized[1]!;
+    const rawLocation = parenthesized[2]!;
 
-    if (method !== undefined && rawLocation !== undefined) {
-      const location = normalizeStackLocation(rawLocation);
+    const location = normalizeStackLocation(rawLocation);
 
-      return (
-        indent +
-        styleText(colors.stack, prefix) +
-        separator +
-        method +
-        " (" +
-        styleText(colors.location, location) +
-        ")"
-      );
-    }
+    return (
+      indent +
+      styleText(colors.stack, prefix) +
+      separator +
+      method +
+      " (" +
+      styleText(colors.location, location) +
+      ")"
+    );
   }
 
   // at file:///path/file.mjs:10:20
@@ -102,35 +99,32 @@ function formatStackLine(line: string): string {
   const plainLocation = content.match(/^(.*?)(:\d+(?::\d+)?)$/);
 
   if (plainLocation) {
-    const [, rawFile, position] = plainLocation;
+    const rawFile = plainLocation[1]!;
+    const position = plainLocation[2]!;
 
-    if (rawFile !== undefined && position !== undefined) {
-      const file = normalizeStackLocation(rawFile);
+    const file = normalizeStackLocation(rawFile);
 
-      // async 等前缀保持默认颜色，仅路径和行列号使用青色。
-      const asyncPrefix = file.match(/^(async\s+)(.+)$/);
+    // async 等前缀保持默认颜色，仅路径和行列号使用青色。
+    const asyncPrefix = file.match(/^(async\s+)(.+)$/);
 
-      if (asyncPrefix) {
-        const [, asyncText, actualFile] = asyncPrefix;
-
-        if (asyncText !== undefined && actualFile !== undefined) {
-          return (
-            indent +
-            styleText(colors.stack, prefix) +
-            separator +
-            asyncText +
-            styleText(colors.location, actualFile + position)
-          );
-        }
-      }
+    if (asyncPrefix) {
+      const [, asyncText, actualFile] = asyncPrefix;
 
       return (
         indent +
         styleText(colors.stack, prefix) +
         separator +
-        styleText(colors.location, file + position)
+        asyncText +
+        styleText(colors.location, actualFile + position)
       );
     }
+
+    return (
+      indent +
+      styleText(colors.stack, prefix) +
+      separator +
+      styleText(colors.location, file + position)
+    );
   }
 
   // 无法识别的堆栈格式：只将 at 设置为灰色。

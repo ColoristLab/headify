@@ -29,9 +29,6 @@ export interface TemplateContext {
 
   /** 当前处理的文件 */
   file: FileInfo;
-
-  /** 起始年份 */
-  startYear?: number;
 }
 
 /**

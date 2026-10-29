@@ -74,4 +74,21 @@ describe("reportResult", () => {
     expect(info).toHaveBeenCalledWith("Dry run: no files will be modified");
     expect(info).toHaveBeenCalledWith("Would update: 1 Unchanged: 0");
   });
+
+  it("正确报告不包含目录的文件路径", () => {
+    const info = vi.spyOn(logger, "info").mockImplementation(() => {});
+
+    reportResult("1.2.3", {
+      template: "",
+      dryRun: false,
+      total: 1,
+      updated: 1,
+      unchanged: 0,
+      wouldUpdate: 0,
+      elapsed: 1,
+      files: [{ path: "index.ts", status: "updated" }],
+    });
+
+    expect(info).toHaveBeenCalledWith("index.ts");
+  });
 });
