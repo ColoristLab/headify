@@ -1,6 +1,6 @@
 {
   "name": "headify",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "File header banner generator for Node.js.",
   "keywords": [
     "banner",
@@ -33,6 +33,9 @@
       "types": "./dist/index.d.mts",
       "default": "./dist/index.mjs"
     }
+  },
+  "publishConfig": {
+    "tag": "latest"
   },
   "scripts": {
     "prepare": "simple-git-hooks",
