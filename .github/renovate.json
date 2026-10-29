@@ -1,0 +1,38 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:best-practices", ":semanticCommits", ":semanticCommitTypeAll(chore)"],
+  "dependencyDashboard": true,
+  "enabledManagers": ["npm", "github-actions"],
+  "ignorePresets": [":pinDevDependencies", ":maintainLockFilesWeekly"],
+  "prHourlyLimit": 5,
+  "timezone": "Asia/Shanghai",
+  "labels": ["dependencies", "renovate"],
+  "rangeStrategy": "bump",
+  "packageRules": [
+    {
+      "description": "Wait 1 day for npm releases",
+      "matchDatasources": ["npm"],
+      "minimumReleaseAge": "1 day"
+    },
+    {
+      "enabled": false,
+      "matchDepTypes": ["peerDependencies"]
+    },
+    {
+      "enabled": false,
+      "matchPackageNames": ["node"]
+    },
+    {
+      "matchPackageNames": ["/oxlint/"],
+      "labels": ["linting"]
+    },
+    {
+      "description": "Automerge non-major dependency updates",
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true,
+      "automergeStrategy": "squash"
+    }
+  ]
+}

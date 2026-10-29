@@ -1,0 +1,104 @@
+{
+  "name": "headify",
+  "version": "0.0.0",
+  "description": "File header banner generator for Node.js.",
+  "keywords": [
+    "banner",
+    "head",
+    "header"
+  ],
+  "bugs": {
+    "url": "https://github.com/ColoristLab/headify/issues"
+  },
+  "license": "MIT",
+  "author": "ajiho",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ColoristLab/headify.git"
+  },
+  "funding": "https://www.lujiahao.com/sponsor",
+  "bin": {
+    "headify": "./dist/cli.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "scripts": {
+    "prepare": "simple-git-hooks",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "lint": "oxlint",
+    "lint:fix": "pnpm run lint --fix",
+    "size": "size-limit",
+    "clean": "rimraf dist",
+    "tsdown": "tsdown",
+    "build": "run-s clean tsdown size",
+    "dev": "pnpm run tsdown --watch",
+    "docs:build": "vitepress build docs",
+    "docs:dev": "vitepress dev docs",
+    "docs:preview": "vitepress preview docs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest --coverage",
+    "test:ui": "pnpm run test --ui",
+    "coverage": "vitest run --coverage",
+    "publint": "publint",
+    "commitlint": "commitlint -e -V",
+    "check": "run-s fmt:check lint typecheck coverage build publint",
+    "release": "releaseasy"
+  },
+  "dependencies": {
+    "cac": "^7.1.0"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "@commitlint/types": "^21.2.3",
+    "@size-limit/file": "^14.3.0",
+    "@types/node": "^26.6.5",
+    "@vitest/coverage-v8": "^5.0.5",
+    "@vitest/ui": "^5.0.5",
+    "npm-run-all2": "^9.0.4",
+    "oxfmt": "^0.75.0",
+    "oxlint": "^1.90.0",
+    "pkg-types": "^2.4.0",
+    "publint": "^0.3.25",
+    "releaseasy": "^0.1.1",
+    "rimraf": "^6.1.3",
+    "simple-git-hooks": "^2.14.0",
+    "size-limit": "^14.3.0",
+    "ts-dedent": "^2.3.0",
+    "tsdown": "^0.23.3",
+    "typescript": "6.0.3",
+    "vitepress": "2.0.0-alpha.21",
+    "vitepress-plugin-group-icons": "^1.8.1",
+    "vitest": "^5.0.5"
+  },
+  "simple-git-hooks": {
+    "commit-msg": "pnpm commitlint",
+    "pre-commit": "pnpm check"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.16.1",
+      "onFail": "download"
+    },
+    "runtime": {
+      "name": "node",
+      "version": "^22.19.0 || ^24.18.0 || >=26.3.0",
+      "onFail": "error"
+    }
+  },
+  "packageManager": "pnpm@12.16.1+sha512.091d1dee7927575661b25dab3c2ae31cafc1c54d6b71ed6a6600cf0c1cb10434a447eae14015f1b23e2e6bedeed79df94a932e2164d2832280dce3fb32f656d1"
+}
