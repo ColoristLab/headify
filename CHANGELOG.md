@@ -1,8 +1,17 @@
+## What's Changed in 0.1.2
+
+- style: optimize terminal output by @ajiho in [#33](https://github.com/ColoristLab/headify/pull/33)
+- chore(deps): update dependency tsdown to ^0.23.4 by @renovate[bot] in [#32](https://github.com/ColoristLab/headify/pull/32)
+- chore: 添加 npm 的版本徽章 by @ajiho
+- chore(deps): update dependency @types/node to ^26.6.6 by @renovate[bot] in [#30](https://github.com/ColoristLab/headify/pull/30)
+
+**Full Changelog**: https://github.com/ColoristLab/headify/compare/v0.1.1...0.1.2
+
 ## What's Changed in 0.1.1
 
 - chore: 指定支持的 Node.js 版本范围 by @ajiho
 
-**Full Changelog**: https://github.com/ColoristLab/headify/compare/v0.1.0...0.1.1
+**Full Changelog**: https://github.com/ColoristLab/headify/compare/v0.1.0...v0.1.1
 
 ## What's Changed in 0.1.0
 
