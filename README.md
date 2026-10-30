@@ -10,6 +10,7 @@ Node.js 文件头部横幅生成工具。
 [![TypeScript](https://img.shields.io/badge/%3C%2F%3E-TypeScript-%230074c1.svg)](https://www.typescriptlang.org/)
 [![Test](https://img.shields.io/github/actions/workflow/status/ColoristLab/headify/tests.yml?label=Test&logo=github&style=flat-square&branch=main)](https://github.com/ColoristLab/headify/actions/workflows/tests.yml)
 [![Node](https://img.shields.io/node/v/headify.svg)](https://nodejs.org/en/about/previous-releases)
+[![npm version](https://img.shields.io/npm/v/headify)](https://www.npmjs.com/package/headify)
 [![Vitest](https://img.shields.io/badge/tested%20with-vitest-fcc72b.svg?logo=vitest)](https://vitest.dev/)
 [![codecov](https://codecov.io/github/ColoristLab/headify/graph/badge.svg?token=YR846BMB6Y)](https://codecov.io/github/ColoristLab/headify)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ColoristLab/headify/blob/main/LICENSE)
