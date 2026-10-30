@@ -4,11 +4,11 @@ type LogMethod = (...messages: unknown[]) => void;
 type LogColor = Parameters<typeof styleText>[0];
 type InspectColor = Exclude<LogColor, readonly unknown[]>;
 
-const colors = {
+export const colors = {
   info: "cyan",
   success: "green",
-  stack: "gray",
-  location: "cyan",
+  muted: "gray",
+  warn: "yellow",
 } as const satisfies Record<string, InspectColor>;
 
 /**
@@ -67,7 +67,7 @@ function formatStackLine(line: string): string {
   const frame = trimmed.match(/^(at)(\s+)(.*)$/);
 
   if (!frame) {
-    return indent + styleText(colors.stack, trimmed);
+    return indent + styleText(colors.muted, trimmed);
   }
 
   const prefix = frame[1]!;
@@ -85,11 +85,11 @@ function formatStackLine(line: string): string {
 
     return (
       indent +
-      styleText(colors.stack, prefix) +
+      styleText(colors.muted, prefix) +
       separator +
       method +
       " (" +
-      styleText(colors.location, location) +
+      styleText(colors.muted, location) +
       ")"
     );
   }
@@ -112,23 +112,23 @@ function formatStackLine(line: string): string {
 
       return (
         indent +
-        styleText(colors.stack, prefix) +
+        styleText(colors.muted, prefix) +
         separator +
         asyncText +
-        styleText(colors.location, actualFile + position)
+        styleText(colors.muted, actualFile + position)
       );
     }
 
     return (
       indent +
-      styleText(colors.stack, prefix) +
+      styleText(colors.muted, prefix) +
       separator +
-      styleText(colors.location, file + position)
+      styleText(colors.muted, file + position)
     );
   }
 
   // 无法识别的堆栈格式：只将 at 设置为灰色。
-  return indent + styleText(colors.stack, prefix) + separator + content;
+  return indent + styleText(colors.muted, prefix) + separator + content;
 }
 
 /**

@@ -1,14 +1,8 @@
 import { styleText } from "node:util";
 
 import pkg from "../package.json" with { type: "json" };
-import { logger } from "./logger.js";
+import { logger, colors } from "./logger.js";
 import type { FileStatus, HeadifyResult } from "./types.js";
-
-const colors = {
-  muted: "gray",
-  info: "cyan",
-  success: "green",
-} as const;
 
 /**
  * 输出单个文件的处理结果。
@@ -20,11 +14,18 @@ function reportFile(path: string, status: FileStatus): void {
 
   const suffix = {
     updated: "",
-    unchanged: ` ${styleText(colors.muted, "(Unchanged)")}`,
+    unchanged: ` (Unchanged)`,
     wouldUpdate: ` ${styleText(colors.info, "(Would update)")}`,
   }[status];
 
-  logger.info(`${styleText(colors.muted, directory)}${filename}${suffix}`);
+  const isUnchanged = status === "unchanged";
+
+  logger.info(
+    `${styleText(colors.muted, directory)}${styleText(
+      isUnchanged ? colors.muted : "reset",
+      filename,
+    )}${suffix}`,
+  );
 }
 
 /**
@@ -36,12 +37,12 @@ export function reportResult(cliVersion: string, result: HeadifyResult): void {
     return;
   }
 
-  logger.info(`${pkg.name} v${cliVersion}`);
+  logger.info(styleText(colors.info, `${pkg.name} v${cliVersion}`));
   logger.info(`Matched ${result.total} files`);
-  logger.info(`Template: ${result.template || "default"}`);
+  logger.info(`Template: ${styleText(colors.info, result.template || "default")}`);
 
   if (result.dryRun) {
-    logger.info("Dry run: no files will be modified");
+    logger.info(styleText(colors.warn, "Dry run: no files will be modified"));
   }
 
   for (const file of result.files) {
