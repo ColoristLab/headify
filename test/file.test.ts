@@ -1,11 +1,11 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { findFiles, hasBanner, prependBanner } from "../src/file.ts";
+import { HeadifyError } from "../src/errors.ts";
+import { findFiles, hasBanner, prependBanner, loadPackage } from "../src/file.ts";
 import { createTempDir } from "./helpers.ts";
-
 let cwd: string;
 
 beforeEach(async () => {
@@ -116,5 +116,78 @@ describe("prependBanner", () => {
 
   it("目标文件不存在时抛出异常", async () => {
     await expect(prependBanner(join(cwd, "missing.ts"), "/* banner */")).rejects.toThrow();
+  });
+});
+
+describe("loadPackage", () => {
+  it("成功读取并解析 package.json", async () => {
+    const packageMetadata = {
+      name: "test-project",
+      version: "1.0.0",
+      homepage: "https://example.com",
+      author: "Test Author",
+      license: "MIT",
+    };
+
+    await writeFile(join(cwd, "package.json"), JSON.stringify(packageMetadata), "utf8");
+
+    await expect(loadPackage(cwd)).resolves.toEqual(packageMetadata);
+  });
+
+  it("package.json 不存在时抛出 PACKAGE_NOT_FOUND 错误", async () => {
+    await expect(loadPackage(cwd)).rejects.toMatchObject({
+      name: "HeadifyError",
+      code: "PACKAGE_NOT_FOUND",
+      message: `Cannot find package.json in "${cwd}".`,
+      cause: expect.objectContaining({
+        code: "ENOENT",
+      }),
+    });
+  });
+
+  it("HeadifyError 应保留原始异常作为 cause", async () => {
+    await writeFile(join(cwd, "package.json"), "{ invalid json }", "utf8");
+
+    try {
+      await loadPackage(cwd);
+      expect.fail("Expected loadPackage to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(HeadifyError);
+
+      if (error instanceof HeadifyError) {
+        expect(error.code).toBe("PACKAGE_INVALID");
+        expect(error.cause).toBeInstanceOf(SyntaxError);
+      }
+    }
+  });
+
+  it("读取 package.json 遇到其他错误时应重新抛出原始错误", async () => {
+    await mkdir(join(cwd, "package.json"));
+
+    await expect(loadPackage(cwd)).rejects.toSatisfy(
+      (error) =>
+        error instanceof Error &&
+        "code" in error &&
+        error.code !== "ENOENT" &&
+        !(error instanceof HeadifyError),
+    );
+  });
+
+  it("解析 package.json 遇到非 SyntaxError 时应重新抛出原始错误", async () => {
+    const originalError = new TypeError("Unexpected error");
+
+    await writeFile(join(cwd, "package.json"), "{}", "utf8");
+
+    // 让 JSON.parse() 抛出一个非 SyntaxError 的异常
+    const parseSpy = vi.spyOn(JSON, "parse").mockImplementation(() => {
+      throw originalError;
+    });
+
+    try {
+      // 使用rejects.toBe而非.rejects.toThrow()，为了验证抛出的就是原始异常对象
+      await expect(loadPackage(cwd)).rejects.toBe(originalError);
+    } finally {
+      parseSpy.mockRestore();
+    }
   });
 });

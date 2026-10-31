@@ -11,8 +11,7 @@ export default (ctx: TemplateContext) => {
   return dedent`
     /*!
      * ${pkg.name} v${pkg.version}
-     * ${pkg.homepage}
-     *
+     * ${pkg.homepage ? `${pkg.homepage}\n *` : ""}
      * Copyright (c) ${year} ${pkg.author}
      * Licensed under the ${pkg.license} license
      */

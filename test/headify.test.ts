@@ -1,3 +1,4 @@
+import { rm } from "node:fs/promises";
 import { join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -142,10 +143,44 @@ describe("headify", () => {
     project = await createProject();
     await project.writeFile("src/index.ts", "source\n");
     // createProject 会创建 package.json，因此需要通过文件系统辅助工具的根目录将其删除。
-    const { rm } = await import("node:fs/promises");
 
     await rm(join(project.cwd, "package.json"));
 
     await expect(headify(["src/index.ts"], { cwd: project.cwd })).rejects.toThrow();
+  });
+
+  it("package.json 不包含 homepage 时应正常生成版权注释", async () => {
+    project = await createProject();
+
+    // 覆盖 package.json，移除 homepage
+    await project.writeFile(
+      "package.json",
+      JSON.stringify(
+        {
+          name: "test-project",
+          version: "1.2.3",
+          author: "Test Author",
+          license: "MIT",
+        },
+        null,
+        2,
+      ),
+    );
+
+    await project.writeFile("src/index.ts", "console.log('hello');");
+
+    await headify(["src/**/*.ts"], {
+      cwd: project.cwd,
+    });
+
+    const content = await project.readFile("src/index.ts");
+
+    expect(content).toContain("test-project v1.2.3");
+    expect(content).toContain("Copyright (c) 2026 Test Author");
+    expect(content).toContain("Licensed under the MIT license");
+
+    // 不应该出现 homepage 相关内容
+    expect(content).not.toContain("https://example.com");
+    expect(content).not.toContain("undefined");
   });
 });

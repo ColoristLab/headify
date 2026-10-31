@@ -3,7 +3,7 @@
 import cac from "cac";
 
 import pkg from "../package.json" with { type: "json" };
-import { logger } from "./logger.ts";
+import { handleError } from "./errors.ts";
 
 const cli = cac(pkg.name);
 
@@ -39,8 +39,7 @@ export async function runCli(argv: string[] = process.argv): Promise<void> {
 
     await cli.runMatchedCommand();
   } catch (error: unknown) {
-    logger.error(error);
-    process.exitCode = 1;
+    handleError(error);
   }
 }
 
