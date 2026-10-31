@@ -2,16 +2,16 @@ import { readFile, stat, writeFile } from "node:fs/promises";
 import { glob } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import type { HeadifyOptions } from "./types.js";
+import type { PackageJson } from "pkg-types";
 
-type FindFilesOptions = Required<Pick<HeadifyOptions, "exclude" | "cwd">>;
+import { HeadifyError } from "./errors.ts";
 
 /**
  * 查找目标文件，只返回普通文件。
  */
 export async function findFiles(
   patterns: string | string[],
-  options: FindFilesOptions,
+  options: { cwd: string; exclude: string[] },
 ): Promise<string[]> {
   const { cwd, exclude } = options;
   const files = new Set<string>();
@@ -79,4 +79,34 @@ export async function prependBanner(file: string, banner: string): Promise<boole
   await writeFile(file, `${normalizedBanner}${separator}${content}`, "utf8");
 
   return true;
+}
+
+export async function loadPackage(cwd: string): Promise<PackageJson> {
+  const packagePath = resolve(cwd, "package.json");
+
+  let content: string;
+
+  try {
+    content = await readFile(packagePath, "utf8");
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      throw new HeadifyError(`Cannot find package.json in "${cwd}".`, "PACKAGE_NOT_FOUND", {
+        cause: error,
+      });
+    }
+
+    throw error;
+  }
+
+  try {
+    return JSON.parse(content) as PackageJson;
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new HeadifyError(`Invalid package.json: ${error.message}`, "PACKAGE_INVALID", {
+        cause: error,
+      });
+    }
+
+    throw error;
+  }
 }

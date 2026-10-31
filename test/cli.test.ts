@@ -97,7 +97,7 @@ describe("CLI", () => {
 
     await runCli(["node", "headify", "--invalid"]);
 
-    expect(loggerError).toHaveBeenCalledWith(error);
+    expect(loggerError).toHaveBeenCalledWith(`Unexpected error: ${error.message}`);
     expect(process.exitCode).toBe(1);
   });
 

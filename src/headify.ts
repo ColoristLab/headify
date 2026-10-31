@@ -1,10 +1,7 @@
-import { readFile } from "node:fs/promises";
-import { relative, resolve } from "node:path";
-
-import type { PackageJson } from "pkg-types";
+import { relative } from "node:path";
 
 import { createContext } from "./context.js";
-import { findFiles, hasBanner, prependBanner } from "./file.js";
+import { findFiles, hasBanner, loadPackage, prependBanner } from "./file.js";
 import { renderBanner, resolveTemplate } from "./renderer.js";
 import type { FileStatus, FileResult, HeadifyOptions, HeadifyResult } from "./types.js";
 
@@ -45,8 +42,7 @@ export async function headify(
     };
   }
 
-  const packagePath = resolve(cwd, "package.json");
-  const packageMetadata = JSON.parse(await readFile(packagePath, "utf8")) as PackageJson;
+  const pkg = await loadPackage(cwd);
 
   // 整个任务只加载一次模板。
   const templateMethod = await resolveTemplate(template);
@@ -58,7 +54,7 @@ export async function headify(
   let wouldUpdate = 0;
 
   for (const file of files) {
-    const context = createContext(packageMetadata, file, cwd);
+    const context = createContext(pkg, file, cwd);
     const path = relative(cwd, file).replaceAll("\\", "/");
     const banner = await renderBanner(templateMethod, context);
 
