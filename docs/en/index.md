@@ -26,7 +26,7 @@ Click [here](./getting-started.md) to get started quickly.
 
 ## Who's Using It
 
-The following projects are using headify (PRs welcome to add your project):
+The following projects are using Headify (PRs welcome to add your project):
 
 - [ColoristLab/AdminLTS](https://github.com/ColoristLab/AdminLTS)
 - [ColoristLab/dataset-config](https://github.com/ColoristLab/dataset-config)

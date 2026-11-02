@@ -172,7 +172,7 @@ headify "dist/**/*.{css,js}" --start-year 2022
 {
   "name": "my-project",
   "version": "1.0.0",
-  "homepage": "https://example.com",
+  "homepage": "https://example.com", // [!code --]
   "author": "Example Author",
   "license": "MIT"
   ...

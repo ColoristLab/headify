@@ -172,7 +172,7 @@ Assume your `package.json` does not have a `homepage` field configured:
 {
   "name": "my-project",
   "version": "1.0.0",
-  "homepage": "https://example.com",
+  "homepage": "https://example.com", // [!code --]
   "author": "Example Author",
   "license": "MIT"
   ...

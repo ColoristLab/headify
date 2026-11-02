@@ -26,7 +26,7 @@ Headify 为你的文件自动添加统一的版权与许可证声明。
 
 ## 谁在用
 
-以下项目正在使用 headify（欢迎提交 PR 添加你的项目）：
+以下项目正在使用 Headify（欢迎提交 PR 添加你的项目）：
 
 - [ColoristLab/AdminLTS](https://github.com/ColoristLab/AdminLTS)
 - [ColoristLab/dataset-config](https://github.com/ColoristLab/dataset-config)
