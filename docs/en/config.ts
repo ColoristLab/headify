@@ -1,5 +1,7 @@
 import { defineAdditionalConfig, type DefaultTheme, type MarkdownLocaleOptions } from "vitepress";
 
+import pkg from "../../package.json" with { type: "json" };
+
 export const markdown: MarkdownLocaleOptions = {
   container: {
     tipLabel: "TIP",
@@ -72,9 +74,25 @@ export default defineAdditionalConfig({
 });
 
 function nav(): DefaultTheme.NavItem[] {
-  return [{ text: "Sponsor", link: "https://www.lujiahao.com/sponsor" }];
+  return [
+    { text: "Sponsor", link: "https://www.lujiahao.com/sponsor" },
+    {
+      text: pkg.version,
+      items: [
+        {
+          text: "Changelog",
+          link: "https://github.com/ColoristLab/headify/blob/main/CHANGELOG.md",
+          target: "_blank",
+        },
+        {
+          text: "Contributing",
+          link: "https://github.com/ColoristLab/headify/blob/main/.github/CONTRIBUTING.md",
+          target: "_blank",
+        },
+      ],
+    },
+  ];
 }
-
 function sidebar(): DefaultTheme.SidebarItem[] {
   return [
     {
@@ -84,6 +102,7 @@ function sidebar(): DefaultTheme.SidebarItem[] {
         { text: "Getting Started", link: "/getting-started" },
         { text: "Custom Templates", link: "/templates" },
         { text: "Command Line", link: "/cli" },
+        { text: "Node.js API", link: "/api" },
       ],
     },
   ];

@@ -1,6 +1,6 @@
 # Custom Templates
 
-Headify supports customizing file headers through JavaScript or TypeScript modules. Templates can access project metadata, the current year, and information about the file being processed, so you can generate Banners that meet your project's needs.
+`Headify` supports customizing file headers through JavaScript or TypeScript modules. Templates can access project metadata, the current year, and information about the file being processed, allowing you to generate banners that meet your project's needs.
 
 Use `--template` to specify a template file:
 
@@ -10,7 +10,7 @@ headify "dist/**/*.{css,js}" --template ./banner.js
 
 ## Template Examples
 
-Headify supports template files with the extensions `.js`, `.ts`, `.mjs`, `.mts`, `.cjs`, and `.cts`.
+`Headify` supports template files with the extensions `.js`, `.ts`, `.mjs`, `.mts`, `.cjs`, and `.cts`.
 
 > [!TIP]
 > The module format of `.js` and `.ts` templates may be affected by the `type` field in `package.json`. If you want to explicitly specify the module format, it is recommended to use the `.mjs` / `.mts` (ESM) or `.cjs` / `.cts` (CommonJS) extensions.
@@ -71,7 +71,7 @@ module.exports = ({ package: pkg, year }: TemplateContext) => {
 
 ### Using the Helper Function
 
-Headify provides a helper function called `dedent`. Its purpose is to remove the common leading indentation from each line of a multiline string, so that template strings can keep code indentation while outputting clean, consistently formatted text. This makes it easier to return custom Banners:
+`Headify` provides a helper function called `dedent`. Its purpose is to remove the common leading indentation from each line of a multi-line string, allowing template strings to keep code indentation while outputting clean, consistently formatted text. This makes it easier to return custom banners:
 
 ```js
 import { dedent } from "headify";
@@ -90,7 +90,7 @@ export default ({ package: pkg, year }) => {
 
 ### Special Handling for Specific Files
 
-Using Bootstrap's [build artifacts](https://github.com/twbs/bootstrap/tree/main/dist) as an example, this demonstrates how to customize the Banner for specific files while maintaining a copyright comment format consistent with Bootstrap.
+Using Bootstrap's [build artifacts](https://github.com/twbs/bootstrap/tree/main/dist) as an example, this demonstrates how to customize the banner for specific files while keeping the copyright comment format consistent with Bootstrap.
 
 ```js
 import { dedent } from "headify";
@@ -124,7 +124,7 @@ Run the command:
 headify "dist/**/*.{js,css}" -t ./banner.mjs
 ```
 
-For example, when processing `bootstrap-grid.css`, the generated Banner is:
+For example, when processing `bootstrap-grid.css`, the generated banner is:
 
 ```text
 /*!
@@ -138,12 +138,13 @@ When processing `bootstrap-grid.css`, the name automatically becomes `Bootstrap 
 
 ## Template Context
 
-When Headify executes the template function, it passes in a context object. Templates can destructure the information they need.
+When `Headify` executes the template function, it passes in a context object. Templates can destructure the information they need.
 
 ```ts
 interface TemplateContext {
   package: PackageJson;
   year: number;
+  startYear: number;
   file: {
     path: string;
     name: string;
@@ -155,7 +156,7 @@ interface TemplateContext {
 
 ### Project Metadata `package`
 
-`package` contains the contents of `package.json` in the project root directory, allowing you to read project metadata from it.
+`package` contains the contents of `package.json` in the project root directory, from which project metadata can be read.
 
 | Property           | Description      |
 | ------------------ | ---------------- |
@@ -169,26 +170,32 @@ The above are only commonly used fields. Other configured `package.json` fields 
 
 ### Current Year `year`
 
-`year` is the current year obtained when Headify is executed, and its type is `number`.
+`year` is the current year obtained when `Headify` is executed, and its type is `number`.
 
 For example, if the current year is `2026`, the value of `year` is `2026`.
+
+### Copyright Start Year `startYear`
+
+`startYear` is the copyright start year set when `Headify` is executed, and its type is `number`.
+
+For example, if you pass a start year of `2020` through the CLI option `--start-year`, then the value is `2020`. If it is not passed, it is the current year (the same effect as `year`).
 
 ### Current File `file`
 
 `file` contains information about the file being processed:
 
-| Property        | Description                                                                    | Example            |
-| --------------- | ------------------------------------------------------------------------------ | ------------------ |
-| `file.path`     | File path relative to the working directory, always using `/` as the separator | `dist/css/app.css` |
-| `file.name`     | File name, including extension                                                 | `app.css`          |
-| `file.basename` | File name, excluding extension                                                 | `app`              |
-| `file.ext`      | File extension, including the leading dot                                      | `.css`             |
+| Property        | Description                                                            | Example            |
+| --------------- | ---------------------------------------------------------------------- | ------------------ |
+| `file.path`     | File path relative to the working directory, always separated with `/` | `dist/css/app.css` |
+| `file.name`     | File name, including the extension                                     | `app.css`          |
+| `file.basename` | File name, excluding the extension                                     | `app`              |
+| `file.ext`      | File extension, including the leading dot                              | `.css`             |
 
-This information can be used to generate Banners related to file names, paths, or extensions.
+This information can be used to generate banners related to the file name, path, or extension.
 
-## Async Templates
+## Asynchronous Templates
 
-Template functions can also be async functions that return `Promise<string>`. For example:
+Template functions can also be asynchronous functions that return `Promise<string>`. For example:
 
 ```ts
 export default async ({ package: pkg, year }) => {
@@ -200,4 +207,4 @@ export default async ({ package: pkg, year }) => {
 };
 ```
 
-Whether you use a synchronous or asynchronous template, it must ultimately return a string.
+Regardless of whether a synchronous or asynchronous template is used, it must ultimately return a string.

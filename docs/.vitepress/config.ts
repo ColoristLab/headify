@@ -1,6 +1,7 @@
 import { defineConfig, type DefaultTheme } from "vitepress";
 import { groupIconMdPlugin, groupIconVitePlugin } from "vitepress-plugin-group-icons";
 
+import pkg from "../../package.json" with { type: "json" };
 import { markdown as enMarkdown } from "../en/config.ts";
 
 const base = "/headify/";
@@ -137,7 +138,24 @@ export default defineConfig({
 });
 
 function nav(): DefaultTheme.NavItem[] {
-  return [{ text: "Sponsor", link: "https://www.lujiahao.com/sponsor" }];
+  return [
+    { text: "Sponsor", link: "https://www.lujiahao.com/sponsor" },
+    {
+      text: pkg.version,
+      items: [
+        {
+          text: "更新日志",
+          link: "https://github.com/ColoristLab/headify/blob/main/CHANGELOG.md",
+          target: "_blank",
+        },
+        {
+          text: "贡献指南",
+          link: "https://github.com/ColoristLab/headify/blob/main/.github/CONTRIBUTING.md",
+          target: "_blank",
+        },
+      ],
+    },
+  ];
 }
 
 function sidebar(): DefaultTheme.SidebarItem[] {
@@ -149,6 +167,7 @@ function sidebar(): DefaultTheme.SidebarItem[] {
         { text: "快速开始", link: "/getting-started" },
         { text: "自定义模板", link: "/templates" },
         { text: "命令行", link: "/cli" },
+        { text: "Node.js API", link: "/api" },
       ],
     },
   ];

@@ -2,6 +2,10 @@
 
 ## 安装
 
+### 前置条件
+
+- [Node.js](https://nodejs.org/) 22.18.0 及以上版本。
+
 ::: code-group
 
 ```sh [npm]
@@ -22,6 +26,8 @@ bun add -D headify
 
 :::
 
+### 使用CLI
+
 要验证 `headify` 是否正确安装，请在项目目录中运行以下命令：
 
 ```bash
@@ -34,8 +40,28 @@ bun add -D headify
 ./node_modules/.bin/headify --help
 ```
 
-> [!TIP]
-> 关于 CLI 使用的更多帮助信息可以参考[命令行](./cli)页面。
+### 在 npm 脚本中使用 CLI
+
+为了简化命令，您可以将其添加到 `package.json` 的脚本中：
+
+```json{5} [package.json]
+{
+  "name": "my-project",
+  "type": "module",
+  "scripts": {
+    "banner": "headify \"dist/**/*.{css,js}\""
+  },
+  "devDependencies": {
+    "headify": "^0.1.3"
+  }
+}
+```
+
+现在，您可以通过以下命令为指定文件添加版权注释：
+
+```sh
+npm run banner
+```
 
 ## 基本用法
 
@@ -87,7 +113,7 @@ headify "dist/**/*.{css,js}" --dry-run
 
 确认结果无误后，移除 `--dry-run` 即可执行实际修改。
 
-## 实际示例
+### 自动读取项目元数据
 
 `package.json` 配置示例：
 
@@ -102,12 +128,68 @@ headify "dist/**/*.{css,js}" --dry-run
 }
 ```
 
+执行以下命令：
+
+```sh
+headify "dist/**/*.{css,js}"
+```
+
 会生成如下横幅注释：
 
 ```text
 /*!
  * my-project v1.0.0
  * https://example.com
+ *
+ * Copyright (c) 2026 Example Author
+ * Licensed under the MIT license
+ */
+```
+
+### 起始年份 <Badge type="tip">from @0.2.0</Badge>
+
+```sh
+headify "dist/**/*.{css,js}" --start-year 2022
+```
+
+会生成如下横幅注释：
+
+```text
+/*!
+ * my-project v1.0.0
+ * https://example.com
+ *
+ * Copyright (c) 2022-2026 Example Author
+ * Licensed under the MIT license
+ */
+```
+
+### 无 homepage 时自动忽略 <Badge type="tip">from @0.2.0</Badge>
+
+假设你的`package.json`没有配置`homepage`字段：
+
+```json [package.json]
+{
+  "name": "my-project",
+  "version": "1.0.0",
+  "homepage": "https://example.com",
+  "author": "Example Author",
+  "license": "MIT"
+  ...
+}
+```
+
+执行以下命令：
+
+```sh
+headify "dist/**/*.{css,js}"
+```
+
+则 `Headify` 会自动忽略`homepage`，生成如下横幅注释：
+
+```text
+/*!
+ * my-project v1.0.0
  *
  * Copyright (c) 2026 Example Author
  * Licensed under the MIT license

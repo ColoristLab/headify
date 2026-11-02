@@ -27,6 +27,9 @@ export interface TemplateContext {
   /** 当前年份 */
   year: number;
 
+  /** 版权起始年份 */
+  startYear: number;
+
   /** 当前处理的文件 */
   file: FileInfo;
 }
@@ -39,6 +42,11 @@ export interface HeadifyOptions {
    * 工作目录，默认为当前进程的工作目录。
    */
   cwd?: string;
+
+  /**
+   * 版权起始年份，默认为当前年份。
+   */
+  startYear?: number;
 
   /**
    * 自定义 banner 模板文件路径，例如 banner.ts、banner.mjs。

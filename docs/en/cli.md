@@ -1,4 +1,4 @@
-# Command Line Help
+# Command-Line Help
 
 Run `headify --help` to view command usage and available options:
 
@@ -13,10 +13,14 @@ Usage:
 Commands:
   <...files>  Prepend banner headers to files.
 
+For more info, run any command with the `--help` flag:
+  $ headify --help
+
 Options:
-  -t, --template <path>        Path to Eta template file
+  -t, --template <path>        Path to banner template file
   -e, --exclude <...patterns>  Exclude files or directories (supports glob)
-      --dry-run                Preview changes without writing files
+  --start-year <year>          Starting year of the copyright notice
+  --dry-run                    Preview changes without writing files
   -h, --help                   Display this message
   -v, --version                Display version number
 ```
@@ -25,6 +29,7 @@ Options:
 | ----------------------------- | -------------------------------------------------------------- |
 | `-t, --template <path>`       | Specify a custom template file                                 |
 | `-e, --exclude <...patterns>` | Exclude specified files or directories, supports Glob patterns |
-| `--dry-run`                   | Preview changes without actually writing to files              |
+| `--start-year <year>`         | Specify the starting year of the copyright notice              |
+| `--dry-run`                   | Preview changes without actually writing files                 |
 | `-h, --help`                  | Display help information                                       |
 | `-v, --version`               | Display version number                                         |

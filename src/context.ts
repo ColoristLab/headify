@@ -11,6 +11,7 @@ export function createContext(
   packageMetadata: PackageJson,
   filePath: string,
   cwd: string,
+  startYear: number,
 ): TemplateContext {
   const absolutePath = resolve(cwd, filePath);
   const relativePath = relative(cwd, absolutePath);
@@ -27,6 +28,7 @@ export function createContext(
   return {
     package: packageMetadata,
     year: new Date().getFullYear(),
+    startYear,
     file,
   };
 }

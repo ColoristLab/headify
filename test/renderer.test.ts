@@ -36,6 +36,7 @@ describe("resolveTemplate", () => {
         template({
           package: { name: "demo" },
           year: 2026,
+          startYear: 2020,
           file: { path: "src/a.ts", name: "a.ts", basename: "a", ext: ".ts" },
         }),
       ),
@@ -52,6 +53,7 @@ describe("resolveTemplate", () => {
       await template({
         package: { name: "demo" },
         year: 2026,
+        startYear: 2020,
         file: { path: "a.js", name: "a.js", basename: "a", ext: ".js" },
       }),
     ).toBe("// a.js");
@@ -64,7 +66,7 @@ describe("resolveTemplate", () => {
     await expect(loadTemplate(path)).rejects.toThrow("Unsupported template extension: .json");
   });
 
-  it("rejects templates that do not export a function", async () => {
+  it("模板未导出函数时应抛出异常", async () => {
     const path = join(cwd, "template.mjs");
     await writeFile(path, "export default 'not a function';", "utf8");
 
@@ -76,6 +78,7 @@ describe("renderBanner", () => {
   const context = {
     package: { name: "demo" },
     year: 2026,
+    startYear: 2020,
     file: { path: "src/a.ts", name: "a.ts", basename: "a", ext: ".ts" },
   };
 

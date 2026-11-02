@@ -35,6 +35,5 @@ jobs:
             chore
             revert
             wip
-            workflow
             types
             release

@@ -10,6 +10,7 @@ Headify 为你的文件自动添加统一的版权与许可证声明。
 
 ## 特性
 
+- TypeScript 友好
 - 轻量高效，专注于文件头部生成
 - 支持 Glob 模式，灵活匹配目标文件
 - 支持自定义模板，兼容 JavaScript、TypeScript 模板

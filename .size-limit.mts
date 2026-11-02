@@ -2,7 +2,7 @@ import type { SizeLimitConfig } from "size-limit";
 
 export default [
   {
-    limit: "0.6KB",
+    limit: "0.7KB",
     path: "./dist/cli.mjs",
   },
   {

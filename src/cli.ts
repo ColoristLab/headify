@@ -18,6 +18,7 @@ cli
   .option("-e, --exclude <...patterns>", "Exclude files or directories (supports glob)", {
     type: [],
   })
+  .option("--start-year <year>", "Starting year of the copyright notice")
   .option("--dry-run", "Preview changes without writing files")
   .action(async (files: string[], options) => {
     const [{ headify }, { reportResult }] = await Promise.all([

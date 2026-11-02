@@ -5,8 +5,11 @@ import { findFiles, hasBanner, loadPackage, prependBanner } from "./file.js";
 import { renderBanner, resolveTemplate } from "./renderer.js";
 import type { FileStatus, FileResult, HeadifyOptions, HeadifyResult } from "./types.js";
 
+const currentYear = new Date().getFullYear();
+
 export const defaultOptions: Required<HeadifyOptions> = {
   cwd: process.cwd(),
+  startYear: currentYear,
   template: "",
   exclude: [],
   dryRun: false,
@@ -23,7 +26,7 @@ export async function headify(
 
   validateOptions(patterns, config);
 
-  const { cwd, template, exclude, dryRun } = config;
+  const { cwd, template, startYear, exclude, dryRun } = config;
   const startedAt = Date.now();
 
   const files = await findFiles(patterns, { cwd, exclude });
@@ -54,7 +57,7 @@ export async function headify(
   let wouldUpdate = 0;
 
   for (const file of files) {
-    const context = createContext(pkg, file, cwd);
+    const context = createContext(pkg, file, cwd, startYear);
     const path = relative(cwd, file).replaceAll("\\", "/");
     const banner = await renderBanner(templateMethod, context);
 
@@ -116,5 +119,12 @@ function validateOptions(patterns: unknown, options: Required<HeadifyOptions>): 
 
   if (typeof options.dryRun !== "boolean") {
     throw new TypeError('Expected "dryRun" to be a boolean.');
+  }
+  if (
+    !Number.isInteger(options.startYear) ||
+    options.startYear < 1 ||
+    options.startYear > currentYear
+  ) {
+    throw new TypeError('Expected "startYear" to be an integer between 1 and the current year.');
   }
 }

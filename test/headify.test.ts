@@ -137,6 +137,13 @@ describe("headify", () => {
     await expect(headify([], { cwd: project.cwd, dryRun: "yes" as never })).rejects.toThrow(
       'Expected "dryRun" to be a boolean.',
     );
+
+    await expect(
+      headify([], {
+        cwd: project.cwd,
+        startYear: "2020" as never,
+      }),
+    ).rejects.toThrow('Expected "startYear" to be an integer between 1 and the current year.');
   });
 
   it("存在匹配文件但缺少 package.json 时拒绝执行", async () => {
@@ -182,5 +189,85 @@ describe("headify", () => {
     // 不应该出现 homepage 相关内容
     expect(content).not.toContain("https://example.com");
     expect(content).not.toContain("undefined");
+  });
+
+  it("指定起始年份时应生成版权年份范围", async () => {
+    project = await createProject();
+    await project.writeFile("src/index.ts", "console.log('hello');");
+
+    await headify(["src/index.ts"], {
+      cwd: project.cwd,
+      startYear: 2020,
+    });
+
+    const content = await project.readFile("src/index.ts");
+    const currentYear = new Date().getFullYear();
+
+    expect(content).toContain(`Copyright (c) 2020-${currentYear} Test Author`);
+  });
+
+  it("起始年份与当前年份相同时不应生成年份范围", async () => {
+    project = await createProject();
+    await project.writeFile("src/index.ts", "console.log('hello');");
+
+    const currentYear = new Date().getFullYear();
+
+    await headify(["src/index.ts"], {
+      cwd: project.cwd,
+      startYear: currentYear,
+    });
+
+    const content = await project.readFile("src/index.ts");
+
+    expect(content).toContain(`Copyright (c) ${currentYear} Test Author`);
+    expect(content).not.toContain(`Copyright (c) ${currentYear}-${currentYear}`);
+  });
+
+  it("未指定起始年份时默认使用当前年份", async () => {
+    project = await createProject();
+    await project.writeFile("src/index.ts", "console.log('hello');");
+
+    await headify(["src/index.ts"], {
+      cwd: project.cwd,
+    });
+
+    const content = await project.readFile("src/index.ts");
+
+    expect(content).toContain(`Copyright (c) ${new Date().getFullYear()} Test Author`);
+  });
+
+  it.each([0, -1, 2020.5, new Date().getFullYear() + 1])(
+    "起始年份 %s 不合法时应抛出异常",
+    async (startYear) => {
+      project = await createProject();
+
+      await expect(
+        headify([], {
+          cwd: project.cwd,
+          startYear,
+        }),
+      ).rejects.toThrow('Expected "startYear" to be an integer between 1 and the current year.');
+    },
+  );
+
+  it("自定义模板也能读取起始年份", async () => {
+    project = await createProject();
+
+    await project.writeFile("src/index.ts", "console.log('hello');");
+
+    await project.writeFile(
+      "template.mjs",
+      "export default ({ startYear, year }) => `/* Copyright ${startYear}-${year} */`;",
+    );
+
+    await headify(["src/index.ts"], {
+      cwd: project.cwd,
+      template: join(project.cwd, "template.mjs"),
+      startYear: 2020,
+    });
+
+    const content = await project.readFile("src/index.ts");
+
+    expect(content).toContain(`Copyright 2020-${new Date().getFullYear()}`);
   });
 });

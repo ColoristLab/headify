@@ -1,16 +1,17 @@
 ![npm](https://img.shields.io/npm/dm/headify)
 
-> A lightweight file header comment generator.
+> A lightweight tool for generating file header comments.
 
-Headify automatically adds unified copyright and license notices to your files.
+Headify automatically adds uniform copyright and license notices to your files.
 
-It supports custom templates and flexible file matching, making code header standardization simple and efficient.
+It supports custom templates and flexible file matching, making it simple and efficient to standardize code headers.
 
 Click [here](./getting-started.md) to get started quickly.
 
 ## Features
 
-- Lightweight and efficient, focused on generating file headers
+- TypeScript-friendly
+- Lightweight and efficient, focused on file header generation
 - Supports Glob patterns for flexible target file matching
 - Supports custom templates, compatible with JavaScript and TypeScript templates
 - **Automatically reads `package.json` metadata to generate copyright and license information**
@@ -21,11 +22,11 @@ Click [here](./getting-started.md) to get started quickly.
 
 ## Sponsor
 
-Buy me a [coffee](https://www.lujiahao.com/sponsor) to support this project 💖
+[Buy me a coffee](https://www.lujiahao.com/sponsor) to support this project 💖
 
-## Who's using
+## Who's Using It
 
-The following projects are using headify (PRs are welcome to add your project):
+The following projects are using headify (PRs welcome to add your project):
 
 - [ColoristLab/AdminLTS](https://github.com/ColoristLab/AdminLTS)
 - [ColoristLab/dataset-config](https://github.com/ColoristLab/dataset-config)
