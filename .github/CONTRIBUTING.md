@@ -15,15 +15,41 @@
 - [Node.js](https://nodejs.org/)：请使用项目要求的版本。
 - [pnpm](https://pnpm.io/)：用于安装项目依赖。
 
-克隆项目并安装依赖：
+### 获取项目
+
+1. 在 GitHub 上 [Fork 本项目](https://github.com/ColoristLab/headify/fork)，将项目复制到自己的账号下。
+2. 克隆自己 Fork 后的仓库：
 
 ```sh
-git clone https://github.com/ColoristLab/headify
+git clone https://github.com/YOUR_USERNAME/headify.git
 
 cd headify
+```
 
+3. 添加原仓库作为上游远程仓库：
+
+```sh
+git remote add upstream https://github.com/ColoristLab/headify.git
+```
+
+4. 安装项目依赖：
+
+```sh
 pnpm install
 ```
+
+### 创建分支
+
+开始修改之前，建议基于原仓库最新的代码创建一个独立分支：
+
+```sh
+git fetch upstream # 获取原仓库的最新代码
+
+# 基于原仓库的 main 分支创建新分支
+git switch -c feat/your-feature upstream/main
+```
+
+请根据实际改动选择合适的分支名称，例如 `feat/xxx`、`fix/xxx`。
 
 ## 代码规范
 
@@ -33,6 +59,18 @@ pnpm install
 - 避免引入不必要的依赖。
 
 ## 提交贡献
+
+完成修改后，将代码提交并推送到自己的 Fork 仓库：
+
+```sh
+git add .
+
+git commit -m "feat: 描述本次改动"
+
+git push origin feat/your-feature
+```
+
+然后前往 GitHub，向本项目的 `main` 分支创建 Pull Request。
 
 在提交 Pull Request 之前，建议先创建一个 Issue 讨论你的想法或改动。
 
