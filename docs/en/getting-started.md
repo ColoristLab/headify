@@ -159,7 +159,7 @@ It generates the following banner comment:
  * my-project v1.0.0
  * https://example.com
  *
- * Copyright (c) 2022-2026 Example Author
+ * Copyright (c) 2022-2026 Example Author // [!code highlight]
  * Licensed under the MIT license
  */
 ```
@@ -185,7 +185,7 @@ Run the following command:
 headify "dist/**/*.{css,js}"
 ```
 
-Then `Headify` automatically ignores `homepage` and generates the following banner comment:
+Then Headify automatically ignores `homepage` and generates the following banner comment:
 
 ```text
 /*!

@@ -1,6 +1,6 @@
 # Node.js API
 
-`Headify` 提供了 JavaScript API，可以在 Node.js 项目中以编程方式为文件添加版权声明。
+Headify 提供了 JavaScript API，可以在 Node.js 项目中以编程方式为文件添加版权声明。
 
 `headify(patterns, options)` 接收一个文件匹配规则数组和一个可选的配置对象，并返回一个解析为`HeadifyResult` 的 Promise。
 
@@ -22,13 +22,13 @@ console.log(results);
 
 `options` 参数支持与命令行配置相同的选项，可以直接通过 JavaScript 对象传入。
 
-| 选项        | 类型       | 默认值          | 描述                                                  |
-| ----------- | ---------- | --------------- | ----------------------------------------------------- |
-| `cwd`       | `string`   | `process.cwd()` | 工作目录，用于解析文件匹配规则和查找 `package.json`。 |
-| `startYear` | `number`   | 当前年份        | 版权声明的起始年份。                                  |
-| `template`  | `string`   | `""`            | 版权声明模板。                                        |
-| `exclude`   | `string[]` | `[]`            | 需要排除的文件匹配规则。                              |
-| `dryRun`    | `boolean`  | `false`         | 预览修改结果，不实际修改文件。                        |
+| 选项        | 类型       | 默认值          | 描述                                                          |
+| ----------- | ---------- | --------------- | ------------------------------------------------------------- |
+| `cwd`       | `string`   | `process.cwd()` | 工作目录，用于解析文件匹配规则和查找 `package.json`。         |
+| `startYear` | `number`   | 当前年份        | 版权声明的起始年份。 版权声明的起始年份。版权声明的起始年份。 |
+| `template`  | `string`   | `""`            | 版权声明模板。                                                |
+| `exclude`   | `string[]` | `[]`            | 需要排除的文件匹配规则。                                      |
+| `dryRun`    | `boolean`  | `false`         | 预览修改结果，不实际修改文件。                                |
 
 有关模板配置的详细信息，请参阅[自定义模板](./templates.md)。
 
@@ -70,11 +70,11 @@ console.log(results);
 | `path`   | 相对于 `cwd` 的文件路径，统一使用正斜杠。               |
 | `status` | 文件处理状态：`updated`、`unchanged` 或 `wouldUpdate`。 |
 
-如果没有匹配到任何文件，`Headify` 会直接返回空结果，不会读取 `package.json`。
+如果没有匹配到任何文件，Headify 会直接返回空结果，不会读取 `package.json`。
 
 ## TypeScript
 
-`Headify` 内置了 TypeScript 类型声明。
+Headify 内置了 TypeScript 类型声明。
 
 除了 `headify` 函数外，包还导出了以下类型：
 

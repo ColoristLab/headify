@@ -31,7 +31,7 @@ npm install -D headify
 headify "dist/**/*.{js,css}"
 ```
 
-`Headify` 默认读取项目 `package.json` 中的元数据，并使用内置模板生成文件头部。你也可以通过自定义模板、排除规则和预览模式，灵活控制处理过程。
+Headify 默认读取项目 `package.json` 中的元数据，并使用内置模板生成文件头部。你也可以通过自定义模板、排除规则和预览模式，灵活控制处理过程。
 
 ## 文档
 

@@ -5,5 +5,5 @@
     "noEmit": true,
     "allowImportingTsExtensions": true
   },
-  "include": [".vitepress/**/*.ts", ".vitepress/**/*.d.ts", "**/*.ts"]
+  "include": [".vitepress/**/*.ts", ".vitepress/**/*.d.ts"]
 }

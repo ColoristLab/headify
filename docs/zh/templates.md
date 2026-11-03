@@ -1,6 +1,6 @@
 # 自定义模板
 
-`Headify` 支持通过 JavaScript 或 TypeScript 模块自定义文件头。模板可以访问项目元数据、当前年份和正在处理的文件信息，从而生成符合项目需求的 Banner。
+Headify 支持通过 JavaScript 或 TypeScript 模块自定义文件头。模板可以访问项目元数据、当前年份和正在处理的文件信息，从而生成符合项目需求的 Banner。
 
 使用 `--template` 指定模板文件：
 
@@ -10,7 +10,7 @@ headify "dist/**/*.{css,js}" --template ./banner.js
 
 ## 模板示例
 
-`Headify` 支持`.js`、 `.ts`、`.mjs`、`.mts`、`.cjs`、`.cts`为拓展名的模板文件。
+Headify 支持`.js`、 `.ts`、`.mjs`、`.mts`、`.cjs`、`.cts`为拓展名的模板文件。
 
 > [!TIP]
 > `.js` 和 `.ts` 模板的模块格式可能受到 `package.json` 中 `type` 字段的影响。如果希望明确指定模块格式，建议使用 `.mjs` / `.mts`（ESM）或 `.cjs` / `.cts`（CommonJS）扩展名。
@@ -71,7 +71,7 @@ module.exports = ({ package: pkg, year }: TemplateContext) => {
 
 ### 使用助手函数
 
-`Headify` 提供了一个助手函数`dedent`，该函数的作用是移除多行字符串每行共有的前导缩进，使模板字符串保持代码缩进的同时，输出整洁、格式统一的文本。让返回自定义 Banner 的时候更容易：
+Headify 提供了一个助手函数`dedent`，该函数的作用是移除多行字符串每行共有的前导缩进，使模板字符串保持代码缩进的同时，输出整洁、格式统一的文本。让返回自定义 Banner 的时候更容易：
 
 ```js
 import { dedent } from "headify";
@@ -138,7 +138,7 @@ headify "dist/**/*.{js,css}" -t ./banner.mjs
 
 ## 模板上下文
 
-`Headify` 执行模板函数时，会传入一个上下文对象。模板可以通过解构获取需要的信息。
+Headify 执行模板函数时，会传入一个上下文对象。模板可以通过解构获取需要的信息。
 
 ```ts
 interface TemplateContext {
@@ -170,15 +170,15 @@ interface TemplateContext {
 
 ### 当前年份 `year`
 
-`year` 是执行 `Headify` 时获取的当前年份，类型为 `number`。
+`year` 是执行 Headify 时获取的当前年份，类型为 `number`。
 
 例如，当前年份为 `2026` 时，`year` 的值为 `2026`。
 
 ### 版权起始年份 `startYear`
 
-`startYear` 是执行 `Headify` 时设置的版权起始年份，类型为 `number`。
+`startYear` 是执行 Headify 时设置的版权起始年份，类型为 `number`。
 
-例如，你通过CLI选项`--start-year`传递起始年份为`2020`,那么该值则为`2020`,未传递时则为当前年份(和`year`效果相同)。
+例如，你通过CLI选项`--start-year`传递起始年份为`2020`,那么该值则为`2020`,未传递则为当前年份(和`year`效果相同)。
 
 ### 当前文件 `file`
 

@@ -185,7 +185,7 @@ headify "dist/**/*.{css,js}" --start-year 2022
 headify "dist/**/*.{css,js}"
 ```
 
-则 `Headify` 会自动忽略`homepage`，生成如下横幅注释：
+则 Headify 会自动忽略`homepage`，生成如下横幅注释：
 
 ```text
 /*!

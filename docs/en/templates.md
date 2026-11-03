@@ -1,6 +1,6 @@
 # Custom Templates
 
-`Headify` supports customizing file headers through JavaScript or TypeScript modules. Templates can access project metadata, the current year, and information about the file being processed, allowing you to generate banners that meet your project's needs.
+Headify supports customizing file headers through JavaScript or TypeScript modules. Templates can access project metadata, the current year, and information about the file being processed, allowing you to generate banners that meet your project's needs.
 
 Use `--template` to specify a template file:
 
@@ -10,7 +10,7 @@ headify "dist/**/*.{css,js}" --template ./banner.js
 
 ## Template Examples
 
-`Headify` supports template files with the extensions `.js`, `.ts`, `.mjs`, `.mts`, `.cjs`, and `.cts`.
+Headify supports template files with the extensions `.js`, `.ts`, `.mjs`, `.mts`, `.cjs`, and `.cts`.
 
 > [!TIP]
 > The module format of `.js` and `.ts` templates may be affected by the `type` field in `package.json`. If you want to explicitly specify the module format, it is recommended to use the `.mjs` / `.mts` (ESM) or `.cjs` / `.cts` (CommonJS) extensions.
@@ -71,7 +71,7 @@ module.exports = ({ package: pkg, year }: TemplateContext) => {
 
 ### Using the Helper Function
 
-`Headify` provides a helper function called `dedent`. Its purpose is to remove the common leading indentation from each line of a multi-line string, allowing template strings to keep code indentation while outputting clean, consistently formatted text. This makes it easier to return custom banners:
+Headify provides a helper function called `dedent`. Its purpose is to remove the common leading indentation from each line of a multi-line string, allowing template strings to keep code indentation while outputting clean, consistently formatted text. This makes it easier to return custom banners:
 
 ```js
 import { dedent } from "headify";
@@ -138,7 +138,7 @@ When processing `bootstrap-grid.css`, the name automatically becomes `Bootstrap 
 
 ## Template Context
 
-When `Headify` executes the template function, it passes in a context object. Templates can destructure the information they need.
+When Headify executes the template function, it passes in a context object. Templates can destructure the information they need.
 
 ```ts
 interface TemplateContext {
@@ -170,13 +170,13 @@ The above are only commonly used fields. Other configured `package.json` fields 
 
 ### Current Year `year`
 
-`year` is the current year obtained when `Headify` is executed, and its type is `number`.
+`year` is the current year obtained when Headify is executed, and its type is `number`.
 
 For example, if the current year is `2026`, the value of `year` is `2026`.
 
 ### Copyright Start Year `startYear`
 
-`startYear` is the copyright start year set when `Headify` is executed, and its type is `number`.
+`startYear` is the copyright start year set when Headify is executed, and its type is `number`.
 
 For example, if you pass a start year of `2020` through the CLI option `--start-year`, then the value is `2020`. If it is not passed, it is the current year (the same effect as `year`).
 

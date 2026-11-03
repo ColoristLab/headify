@@ -1,0 +1,47 @@
+/* ========================================
+   Responsive Markdown Tables
+======================================== */
+
+/* 表格滚动容器 */
+.vp-doc table {
+  display: block;
+  inline-size: 100%;
+  max-inline-size: 100%;
+  overflow-x: auto;
+  box-sizing: border-box;
+}
+
+/* 默认使用浏览器的自动表格布局 */
+.vp-doc table td,
+.vp-doc table th {
+  white-space: normal;
+}
+
+/* 纯代码单元格：根据代码内容收缩 */
+.vp-doc table td:has(> code:only-child) {
+  /* width: 1%; */
+  white-space: nowrap;
+}
+
+/* 普通文本单元格：保留合理的阅读空间 */
+.vp-doc table td:not(:has(> code:only-child)) {
+  min-inline-size: min(12em, 45vw);
+}
+
+/* 代码自身不换行 */
+.vp-doc table code {
+  white-space: nowrap;
+}
+
+/* 代码组 */
+
+.vp-code-group .tabs {
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* 旧版 IE / Edge */
+}
+
+/* Chrome、Safari、新版 Edge */
+.vp-code-group .tabs::-webkit-scrollbar {
+  display: none;
+}

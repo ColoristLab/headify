@@ -1,6 +1,6 @@
 # Node.js API
 
-`Headify` provides a JavaScript API that can be used to programmatically add copyright notices to files in Node.js projects.
+Headify provides a JavaScript API that can be used to programmatically add copyright notices to files in Node.js projects.
 
 `headify(patterns, options)` accepts an array of file patterns and an optional configuration object, and returns a Promise that resolves to a `HeadifyResult`.
 
@@ -70,11 +70,11 @@ Each entry in `files` contains the following fields:
 | `path`   | File path relative to `cwd`, always using forward slashes.        |
 | `status` | File processing status: `updated`, `unchanged`, or `wouldUpdate`. |
 
-If no files match, `Headify` returns an empty result directly and does not read `package.json`.
+If no files match, Headify returns an empty result directly and does not read `package.json`.
 
 ## TypeScript
 
-`Headify` includes built-in TypeScript type declarations.
+Headify includes built-in TypeScript type declarations.
 
 In addition to the `headify` function, the package also exports the following types:
 
