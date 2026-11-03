@@ -159,7 +159,7 @@ headify "dist/**/*.{css,js}" --start-year 2022
  * my-project v1.0.0
  * https://example.com
  *
- * Copyright (c) 2022-2026 Example Author
+ * Copyright (c) 2022-2026 Example Author // [!code highlight]
  * Licensed under the MIT license
  */
 ```
