@@ -16,7 +16,7 @@ export const defaultOptions: Required<HeadifyOptions> = {
 };
 
 export async function headify(
-  patterns: string[],
+  patterns: string | string[],
   options: HeadifyOptions = {},
 ): Promise<HeadifyResult> {
   const config = {
@@ -29,7 +29,12 @@ export async function headify(
   const { cwd, template, startYear, exclude, dryRun } = config;
   const startedAt = Date.now();
 
-  const files = await findFiles(patterns, { cwd, exclude });
+  const normalizedPatterns = typeof patterns === "string" ? [patterns] : patterns;
+
+  const files = await findFiles(normalizedPatterns, {
+    cwd,
+    exclude,
+  });
 
   // 没有匹配文件时直接返回空结果，不读取 package.json。
   if (files.length === 0) {
@@ -98,8 +103,11 @@ export async function headify(
  * 验证 headify 参数。
  */
 function validateOptions(patterns: unknown, options: Required<HeadifyOptions>): void {
-  if (!Array.isArray(patterns) || !patterns.every((pattern) => typeof pattern === "string")) {
-    throw new TypeError("Expected patterns to be an array of strings.");
+  if (
+    typeof patterns !== "string" &&
+    (!Array.isArray(patterns) || !patterns.every((pattern) => typeof pattern === "string"))
+  ) {
+    throw new TypeError("Expected patterns to be a string or an array of strings.");
   }
 
   if (typeof options.cwd !== "string") {

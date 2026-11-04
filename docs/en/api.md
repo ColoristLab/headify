@@ -2,7 +2,7 @@
 
 Headify provides a JavaScript API that can be used to programmatically add copyright notices to files in Node.js projects.
 
-`headify(patterns, options)` accepts an array of file patterns and an optional configuration object, and returns a Promise that resolves to a `HeadifyResult`.
+`headify(patterns, options)` accepts a file pattern (a string or an array of strings) and an optional configuration object, and returns a Promise that resolves to `HeadifyResult`.
 
 Unlike the CLI, the API does not parse command-line arguments. All configuration options can be passed directly as parameters.
 
