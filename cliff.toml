@@ -25,6 +25,7 @@ body = """
             {% if commit.breaking %}[**breaking**] {% endif %}\
             {{ commit.message | upper_first }} - \
             ([{{ commit.id | truncate(length=7, end="") }}]({{ self::remote_url() }}/commit/{{ commit.id }}))\
+            {% if commit.remote and commit.remote.username %} by @{{ commit.remote.username }}{% endif %}\
     {% endfor %}
 {% endfor %}
 
