@@ -28,7 +28,7 @@
     },
     {
       "description": "Automerge non-major dependency updates",
-      "matchUpdateTypes": ["minor", "patch"],
+      "matchUpdateTypes": ["minor", "patch", "digest"],
       "automerge": true,
       "automergeType": "pr",
       "platformAutomerge": true,
