@@ -2,7 +2,7 @@
 
 Headify 提供了 JavaScript API，可以在 Node.js 项目中以编程方式为文件添加版权声明。
 
-`headify(patterns, options)` 接收一个文件匹配规则数组和一个可选的配置对象，并返回一个解析为`HeadifyResult` 的 Promise。
+`headify(patterns, options)` 接收一个文件匹配规则（字符串或字符串数组）和一个可选的配置对象，并返回一个解析为 `HeadifyResult` 的 Promise。
 
 与命令行不同，API 不会解析命令行参数。所有配置选项都可以直接通过参数传入。
 

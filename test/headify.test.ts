@@ -1,18 +1,21 @@
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { headify } from "../src/headify.ts";
 import { createProject } from "./helpers.ts";
 
 describe("headify", () => {
-  let project: Awaited<ReturnType<typeof createProject>> | undefined;
+  let project: Awaited<ReturnType<typeof createProject>>;
+
+  beforeEach(async () => {
+    project = await createProject();
+  });
 
   afterEach(async () => {
     vi.restoreAllMocks();
-    await project?.cleanup();
-    project = undefined;
+    await project.cleanup();
   });
 
   it("没有匹配文件时返回空结果，并跳过 package.json 的加载", async () => {
@@ -32,7 +35,6 @@ describe("headify", () => {
   });
 
   it("为匹配的文件添加横幅并返回汇总计数", async () => {
-    project = await createProject();
     await project.writeFile("src/index.ts", "export const value = 1;\n");
     await project.writeFile("src/other.ts", "export const other = 2;\n");
 
@@ -56,7 +58,6 @@ describe("headify", () => {
   });
 
   it("重复运行时不会添加重复横幅", async () => {
-    project = await createProject();
     await project.writeFile("src/index.ts", "export const value = 1;\n");
 
     const options = { cwd: project.cwd, template: "" };
@@ -71,7 +72,6 @@ describe("headify", () => {
   });
 
   it("排除符合排除模式的文件", async () => {
-    project = await createProject();
     await project.writeFile("src/index.ts", "index\n");
     await project.writeFile("dist/bundle.js", "bundle\n");
 
@@ -86,7 +86,6 @@ describe("headify", () => {
   });
 
   it("试运行模式会报告需要修改的文件，但不会写入文件", async () => {
-    project = await createProject();
     const original = "export const value = 1;\n";
     await project.writeFile("src/index.ts", original);
 
@@ -105,7 +104,6 @@ describe("headify", () => {
   });
 
   it("试运行模式会将已有横幅的文件报告为未更改", async () => {
-    project = await createProject();
     await project.writeFile("src/index.ts", "/* custom */\nsource\n");
     await project.writeFile("template.mjs", "export default () => '/* custom */';");
 
@@ -119,12 +117,13 @@ describe("headify", () => {
     expect(result.unchanged).toBe(1);
   });
 
-  it("验证匹配模式和选项类型", async () => {
-    project = await createProject();
-
-    await expect(headify("src/*.ts" as never, { cwd: project.cwd })).rejects.toThrow(
-      "Expected patterns to be an array of strings.",
+  it("验证参数(匹配模式)和选项类型", async () => {
+    await expect(headify(["dist/**/*.js", 123] as never, { cwd: project.cwd })).rejects.toThrow(
+      "Expected patterns to be a string or an array of strings.",
     );
+
+    await expect(headify(123 as never, { cwd: project.cwd })).rejects.toThrow(TypeError);
+
     await expect(headify([], { cwd: 123 as never })).rejects.toThrow(
       'Expected "cwd" to be a string.',
     );
@@ -147,7 +146,6 @@ describe("headify", () => {
   });
 
   it("存在匹配文件但缺少 package.json 时拒绝执行", async () => {
-    project = await createProject();
     await project.writeFile("src/index.ts", "source\n");
     // createProject 会创建 package.json，因此需要通过文件系统辅助工具的根目录将其删除。
 
@@ -157,8 +155,6 @@ describe("headify", () => {
   });
 
   it("package.json 不包含 homepage 时应正常生成版权注释", async () => {
-    project = await createProject();
-
     // 覆盖 package.json，移除 homepage
     await project.writeFile(
       "package.json",
@@ -192,7 +188,6 @@ describe("headify", () => {
   });
 
   it("指定起始年份时应生成版权年份范围", async () => {
-    project = await createProject();
     await project.writeFile("src/index.ts", "console.log('hello');");
 
     await headify(["src/index.ts"], {
@@ -207,7 +202,6 @@ describe("headify", () => {
   });
 
   it("起始年份与当前年份相同时不应生成年份范围", async () => {
-    project = await createProject();
     await project.writeFile("src/index.ts", "console.log('hello');");
 
     const currentYear = new Date().getFullYear();
@@ -224,7 +218,6 @@ describe("headify", () => {
   });
 
   it("未指定起始年份时默认使用当前年份", async () => {
-    project = await createProject();
     await project.writeFile("src/index.ts", "console.log('hello');");
 
     await headify(["src/index.ts"], {
@@ -251,8 +244,6 @@ describe("headify", () => {
   );
 
   it("自定义模板也能读取起始年份", async () => {
-    project = await createProject();
-
     await project.writeFile("src/index.ts", "console.log('hello');");
 
     await project.writeFile(
@@ -269,5 +260,16 @@ describe("headify", () => {
     const content = await project.readFile("src/index.ts");
 
     expect(content).toContain(`Copyright 2020-${new Date().getFullYear()}`);
+  });
+
+  it("应支持传入单个字符串", async () => {
+    await project.writeFile("dist/index.js", "console.log('hello');");
+
+    const result = await headify("dist/**/*.js", {
+      cwd: project.cwd,
+    });
+
+    expect(result).toBeDefined();
+    expect(result.files).toBeInstanceOf(Array);
   });
 });
