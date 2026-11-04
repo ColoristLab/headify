@@ -10,7 +10,7 @@ const cli = cac(pkg.name);
 cli.help().version(pkg.version);
 
 cli
-  .command("<...files>", "Prepend banner headers to files.", {
+  .command("[...files]", "Prepend banner headers to files.", {
     ignoreOptionDefaultValue: true,
     allowUnknownOptions: true,
   })
@@ -26,7 +26,11 @@ cli
       import("./reporter.ts"),
     ]);
 
-    const result = await headify(files, options);
+    const DEFAULT_FILES = ["dist/**/*.js", "dist/**/*.mjs", "dist/**/*.cjs", "dist/**/*.css"];
+
+    const patterns = files.length ? files : DEFAULT_FILES;
+
+    const result = await headify(patterns, options);
 
     reportResult(pkg.version, result);
   });
