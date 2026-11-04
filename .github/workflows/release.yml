@@ -16,7 +16,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # 获取完整 Git 历史和 Tags，用于生成 Changelog
 
       - name: Set up pnpm
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
@@ -34,16 +34,17 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Publish to npm
-        run: pnpm publish --no-git-checks
-
       - name: Generate changelog for the latest release
         run: pnpm release changelog --config cliff.toml -o CHANGELOG-LATEST.md -vv --latest --strip header
         env:
           GITHUB_REPO: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Github Release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           body_path: CHANGELOG-LATEST.md
           prerelease: ${{ contains(github.ref_name, '-') }}
+
+      - name: Publish to npm
+        run: pnpm publish --no-git-checks
