@@ -8,10 +8,10 @@ headify --help
 
 ```text
 Usage:
-  $ headify <...files>
+  $ headify [...files]
 
 Commands:
-  <...files>  Prepend banner headers to files.
+  [...files]  Prepend banner headers to files.
 
 For more info, run any command with the `--help` flag:
   $ headify --help
