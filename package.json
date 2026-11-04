@@ -1,6 +1,6 @@
 {
   "name": "headify",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "File header banner generator for Node.js.",
   "keywords": [
     "banner",

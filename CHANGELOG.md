@@ -1,3 +1,13 @@
+## [0.3.0](https://github.com/ColoristLab/headify/compare/v0.2.0..0.3.0) - 2026-11-04
+
+### 🚀 Features
+
+- 支持默认CLI参数 (#46) - ([e55ed06](https://github.com/ColoristLab/headify/commit/e55ed06a8af552d73d19285321be2a74ddaf8a54))
+
+### ⚙️ Miscellaneous Tasks
+
+- 调整变更日志 - ([afa7c13](https://github.com/ColoristLab/headify/commit/afa7c137430fa8293e74cf7059b991ebfc7cf4a3))
+
 ## [0.2.0](https://github.com/ColoristLab/headify/compare/v0.1.3..v0.2.0) - 2026-11-03
 
 ### 🚀 Features
