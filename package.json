@@ -73,7 +73,7 @@
     "@vitest/ui": "^5.1.0",
     "npm-run-all2": "^9.0.4",
     "oxfmt": "^0.76.0",
-    "oxlint": "^1.90.0",
+    "oxlint": "^1.91.0",
     "pkg-types": "^2.4.0",
     "publint": "^0.3.25",
     "releaseasy": "^0.1.1",
