@@ -72,7 +72,7 @@
     "@vitest/coverage-v8": "^5.1.0",
     "@vitest/ui": "^5.1.0",
     "npm-run-all2": "^9.0.4",
-    "oxfmt": "^0.77.0",
+    "oxfmt": "^0.78.0",
     "oxlint": "^1.92.0",
     "pkg-types": "^2.4.0",
     "publint": "^0.3.25",
