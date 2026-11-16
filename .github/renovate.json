@@ -1,7 +1,9 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:best-practices", ":semanticCommits", ":semanticCommitTypeAll(chore)"],
-  "dependencyDashboard": true,
+  "dependencyDashboard": {
+    "enabled": true
+  },
   "enabledManagers": ["npm", "github-actions"],
   "ignorePresets": [":pinDevDependencies", ":maintainLockFilesWeekly"],
   "prHourlyLimit": 5,
