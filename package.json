@@ -61,7 +61,7 @@
     "release": "releaseasy"
   },
   "dependencies": {
-    "cac": "^7.1.0"
+    "cac": "^7.1.1"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",

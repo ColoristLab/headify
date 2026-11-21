@@ -176,8 +176,8 @@ importers:
   .:
     dependencies:
       cac:
-        specifier: ^7.1.0
-        version: 7.1.0
+        specifier: ^7.1.1
+        version: 7.1.1
     devDependencies:
       '@commitlint/cli':
         specifier: ^21.2.4
@@ -1314,8 +1314,8 @@ packages:
     resolution: {integrity: sha512-YovQ3rzhaLMIrDjNDMkNS01tea93qhEhG5xy8f6+R0l+dw3Ki+5sCoIoI942iuLZTHWogWktgwVDhU09iNEimQ==}
     engines: {node: 20 || >=22}
 
-  cac@7.1.0:
-    resolution: {integrity: sha512-LMDU/U2yA4IPIY8KT0NsNPWEYZvAMkbgyspxJ6btJaYV+WMDOHAZCmB0lsTObiHaRS1V/ztKAl7+TSkTqXyeoA==}
+  cac@7.1.1:
+    resolution: {integrity: sha512-8zc+h51HxpodKsA7L4PpBNd+9qlrfuUcyUDE5a793BJfN4NZgwk7v9NmrY3ptZ+Sk0+ToigxSzkb47AsEgyizw==}
     engines: {node: '>=20.19.0'}
 
   callsites@3.1.0:
@@ -3128,7 +3128,7 @@ snapshots:
     dependencies:
       balanced-match: 4.0.4
 
-  cac@7.1.0: {}
+  cac@7.1.1: {}
 
   callsites@3.1.0: {}
 
@@ -3809,7 +3809,7 @@ snapshots:
 
   tsdown@0.23.7(publint@0.3.25)(typescript@6.0.3):
     dependencies:
-      cac: 7.1.0
+      cac: 7.1.1
       defu: 6.1.7
       empathic: 2.1.0
       hookable: 6.1.2
